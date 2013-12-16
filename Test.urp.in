@@ -1,0 +1,14 @@
+safeGet Test/main
+safeGet Test/main_ru
+safeGet Test/main_en
+allow mime text/javascript
+allow mime text/css
+database dbname=Test
+sql ./Test.sql
+debug
+ffi ./Callback
+include ./Callback.h
+link ./Callback.o
+
+$/option
+./Test
