@@ -7,17 +7,19 @@ ifdef MAIN
 
 # Main section
 
-URCC = $(shell $(shell urweb -print-ccompiler) -print-prog-name=gcc)
+URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Makefile.devel ./Test.exe ./Test.sql
+all: ./Makefile.devel ./Test.exe ./Test.sql ./Test2.exe ./Test2.sql
 .PHONY: clean
 clean: ./Makefile.devel
 	rm -rf .cake3 ./Callback.o ./Test.sql ./Test.exe
-.PHONY: run
-run: ./Makefile.devel ./Test.exe ./Test.sql
-	./Test.exe
+./Test2.exe: .fix-multy2
+./Test2.urp: ./Makefile.devel ./Test2.urp.in
+	cat ./Test2.urp.in > ./Test2.urp
+./Test2.urp.in: ./Callback.h ./Callback.o ./Makefile.devel ./Test2.ur ./Test2.urs
+	touch ./Test2.urp.in
 ./Test.exe: .fix-multy1
 ./Test.urp: ./Makefile.devel ./Test.urp.in
 	cat ./Test.urp.in > ./Test.urp
@@ -25,16 +27,20 @@ run: ./Makefile.devel ./Test.exe ./Test.sql
 	touch ./Test.urp.in
 ./Cakegen: ./Cakefile.hs
 	cake3
-./Callback.o: ./Callback.c ./Makefile.devel $(call GUARD,URCC) $(call GUARD,URINCL)
-	$(URCC) -c $(URINCL) -o ./Callback.o ./Callback.c
+./Callback.o: ./Callback.cpp ./Makefile.devel $(call GUARD,URCPP) $(call GUARD,URINCL)
+	$(URCPP) -c $(URINCL) -std=c++11 -o ./Callback.o ./Callback.cpp
 ./Makefile.devel: ./Cakegen
 	./Cakegen
 ./Test.sql: .fix-multy1
+./Test2.sql: .fix-multy2
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: ./Makefile.devel ./Test.urp $(call GUARD,URVERSION)
 	urweb -dbms sqlite ./Test
-$(call GUARD,URCC):
-	rm -f .cake3/GUARD_URCC_*
+.INTERMEDIATE: .fix-multy2
+.fix-multy2: ./Makefile.devel ./Test2.urp $(call GUARD,URVERSION)
+	urweb -dbms sqlite ./Test2
+$(call GUARD,URCPP):
+	rm -f .cake3/GUARD_URCPP_*
 	touch $@
 $(call GUARD,URINCL):
 	rm -f .cake3/GUARD_URINCL_*
@@ -51,8 +57,12 @@ else
 all: .fix-multy1
 .PHONY: clean
 clean: .fix-multy1
-.PHONY: run
-run: .fix-multy1
+.PHONY: ./Test2.exe
+./Test2.exe: .fix-multy1
+.PHONY: ./Test2.urp
+./Test2.urp: .fix-multy1
+.PHONY: ./Test2.urp.in
+./Test2.urp.in: .fix-multy1
 .PHONY: ./Test.exe
 ./Test.exe: .fix-multy1
 .PHONY: ./Test.urp
@@ -67,6 +77,8 @@ run: .fix-multy1
 ./Makefile.devel: .fix-multy1
 .PHONY: ./Test.sql
 ./Test.sql: .fix-multy1
+.PHONY: ./Test2.sql
+./Test2.sql: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3

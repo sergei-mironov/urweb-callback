@@ -1,23 +1,36 @@
 
-fun handler_get (c:int) : transaction page = 
-  debug ("handler called with args: " ^ (show c));
-  return <xml/>
-
-fun handler_post (s:{UName:string}) : transaction page = 
-  debug ("handler called with args: " ^ (s.UName));
-  return <xml/>
-
-fun main {} : transaction page = 
-  Callback.call (url (handler_get 33));
-  (* Callback.call (url (handler_post {UName="blabla"})); *)
+fun template (mb:transaction xbody) : transaction page =
+  b <- mb;
   return
     <xml>
       <head/>
-      <body>
-        <form>
-          User Name: <textbox{#UName}/><br/>
-          <submit action={handler_post}/>
-        </form>
-      </body>
+      <body>{b}</body>
     </xml>
-    
+
+fun job_finishead (j: Callback.job) : transaction page = 
+  debug ("Test.ur: job finished" ^ (show (Callback.exitcode j)));
+  return <xml/>
+
+fun job_monitor (j:Callback.job) : transaction page = template (
+  return <xml>
+      Job : {[j]}
+      <br/>
+      Pid : {[Callback.pid j]}
+      <br/>
+      ExitCode : {[Callback.exitcode j]}
+      <br/>
+      Stdout:  {[Callback.stdout j]}
+      <br/>
+      Errors:  {[Callback.errors j]}
+    </xml>)
+
+fun job_start {} : transaction page =
+  j <- Callback.create "for i in `seq 1 1 15`; do echo -n $i; sleep 2 ; done" "" 100 ;
+  Callback.run j (url (job_finishead j));
+  redirect (url (job_monitor j))
+
+fun main {} : transaction page = template (
+  return
+    <xml>
+      <a link={job_start {}}>Start a job</a>
+    </xml>)

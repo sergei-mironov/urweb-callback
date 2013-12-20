@@ -1,0 +1,11 @@
+safeGet Test2/main
+allow mime text/javascript
+allow mime text/css
+database dbname=Test2
+sql ./Test2.sql
+debug
+ffi ./Callback
+include ./Callback.h
+link -lstdc++ ./Callback.o
+
+./Test2

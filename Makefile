@@ -7,30 +7,36 @@ ifdef MAIN
 
 # Main section
 
-URCC = $(shell $(shell urweb -print-ccompiler) -print-prog-name=gcc)
+URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Test.exe ./Test.sql
+all: ./Test.exe ./Test.sql ./Test2.exe ./Test2.sql
 .PHONY: clean
 clean: 
 	rm -rf .cake3 ./Callback.o ./Test.sql ./Test.exe
-.PHONY: run
-run: ./Test.exe ./Test.sql
-	./Test.exe
+./Test2.exe: .fix-multy2
+./Test2.urp: ./Test2.urp.in
+	cat ./Test2.urp.in > ./Test2.urp
+./Test2.urp.in: ./Callback.h ./Callback.o ./Test2.ur ./Test2.urs
+	touch ./Test2.urp.in
 ./Test.exe: .fix-multy1
 ./Test.urp: ./Test.urp.in
 	cat ./Test.urp.in > ./Test.urp
 ./Test.urp.in: ./Callback.h ./Callback.o ./Test.ur ./Test.urs
 	touch ./Test.urp.in
-./Callback.o: ./Callback.c $(call GUARD,URCC) $(call GUARD,URINCL)
-	$(URCC) -c $(URINCL) -o ./Callback.o ./Callback.c
+./Callback.o: ./Callback.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
+	$(URCPP) -c $(URINCL) -std=c++11 -o ./Callback.o ./Callback.cpp
 ./Test.sql: .fix-multy1
+./Test2.sql: .fix-multy2
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: ./Test.urp $(call GUARD,URVERSION)
 	urweb -dbms sqlite ./Test
-$(call GUARD,URCC):
-	rm -f .cake3/GUARD_URCC_*
+.INTERMEDIATE: .fix-multy2
+.fix-multy2: ./Test2.urp $(call GUARD,URVERSION)
+	urweb -dbms sqlite ./Test2
+$(call GUARD,URCPP):
+	rm -f .cake3/GUARD_URCPP_*
 	touch $@
 $(call GUARD,URINCL):
 	rm -f .cake3/GUARD_URINCL_*
@@ -47,8 +53,12 @@ else
 all: .fix-multy1
 .PHONY: clean
 clean: .fix-multy1
-.PHONY: run
-run: .fix-multy1
+.PHONY: ./Test2.exe
+./Test2.exe: .fix-multy1
+.PHONY: ./Test2.urp
+./Test2.urp: .fix-multy1
+.PHONY: ./Test2.urp.in
+./Test2.urp.in: .fix-multy1
 .PHONY: ./Test.exe
 ./Test.exe: .fix-multy1
 .PHONY: ./Test.urp
@@ -59,6 +69,8 @@ run: .fix-multy1
 ./Callback.o: .fix-multy1
 .PHONY: ./Test.sql
 ./Test.sql: .fix-multy1
+.PHONY: ./Test2.sql
+./Test2.sql: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3
