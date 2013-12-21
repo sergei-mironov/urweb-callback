@@ -10,25 +10,26 @@ fun template (mb:transaction xbody) : transaction page =
 fun finished (j:Callback.job) : transaction page =
   return <xml/>
 
-fun monitor (j:Callback.job) = template (
-  f <- form {};
-  return
-    <xml>
-      Job : {[j]}
-      <br/>
-      Pid : {[Callback.pid j]}
-      <br/>
-      ExitCode : {[Callback.exitcode j]}
-      <br/>
-      Stdout:  {[Callback.stdout j]}
-      <br/>
-      Errors:  {[Callback.errors j]}
-      <hr/>
-      {f}
-    </xml>)
-
 and handler (s:{UName:string}) : transaction page = 
   let
+
+    (* One have to move the monitor to the toplevel to make bug gone *)
+    fun monitor (j:Callback.job) = template (
+      f <- form {};
+      return
+        <xml>
+          Job : {[j]}
+          <br/>
+          Pid : {[Callback.pid j]}
+          <br/>
+          ExitCode : {[Callback.exitcode j]}
+          <br/>
+          Stdout:  {[Callback.stdout j]}
+          <br/>
+          Errors:  {[Callback.errors j]}
+          <hr/>
+          {f}
+        </xml>)
 
     fun start {} : transaction xbody =
       j <- Callback.create s.UName "" 100;
@@ -43,6 +44,7 @@ and handler (s:{UName:string}) : transaction page =
           <hr/>
           {f}
         </xml>)
+
   in
     template (
       case s.UName = "" of
