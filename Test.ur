@@ -10,11 +10,11 @@ fun template (mb:transaction xbody) : transaction page =
     </xml>
 
 fun job_finishead (jr: Callback.jobref) : transaction page = 
-  debug ("Test.ur: job finished" ^ (show (Callback.exitcode (gj jr))));
+  debug ("Test.ur: job finished" ^ (show jr));
   return <xml/>
 
 fun job_monitor (jr:Callback.jobref) : transaction page = template (
-  let val j = Callback.deref jr in
+  j <- Callback.deref jr;
   return <xml>
       Job : {[jr]}
       <br/>
@@ -25,8 +25,7 @@ fun job_monitor (jr:Callback.jobref) : transaction page = template (
       Stdout:  {[Callback.stdout j]}
       <br/>
       Errors:  {[Callback.errors j]}
-    </xml>
-  end)
+    </xml>)
 
 fun job_start {} : transaction page =
   j <- Callback.create "for i in `seq 1 1 15`; do echo -n $i; sleep 2 ; done" "" 100 ;

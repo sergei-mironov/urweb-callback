@@ -6,8 +6,8 @@ val create : string -> string -> int -> transaction job
 val run: job -> url -> transaction unit
 val cleanup: job -> transaction unit
 
-val tryDeref : jobref -> option job
-val deref : jobref -> job
+val tryDeref : jobref -> transaction (option job)
+val deref : jobref -> transaction job
 val ref : job -> jobref
 
 val pid : job -> int

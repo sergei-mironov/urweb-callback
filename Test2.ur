@@ -13,7 +13,7 @@ fun finished (j:Callback.jobref) : transaction page =
   return <xml/>
 
 fun monitor (jr:Callback.jobref) = template (
-  j <- return (Callback.deref jr);
+  j <- Callback.deref jr;
   f <- form {};
   x <- (return
     <xml>
@@ -66,7 +66,7 @@ and form {} : transaction xbody =
     </xml>
 
 and cleanup (jr:Callback.jobref) = template (
-  o <- return (Callback.tryDeref jr);
+  o <- Callback.tryDeref jr;
   case o of
     Some j =>
       Callback.cleanup j;

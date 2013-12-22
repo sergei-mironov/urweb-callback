@@ -13,6 +13,7 @@ project = do
     ur (pair "Test.ur")
     safeGet "Test/main"
     safeGet "Test/main_ru"
+    safeGet "Test/job_monitor"
     safeGet "Test/main_en"
     safeGet "Test/handler_get"
     safeGet "Test/job_start"
