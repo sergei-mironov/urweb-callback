@@ -28,6 +28,9 @@ project = do
   a2 <- uwapp "-dbms sqlite" "Test2.urp" $ do
     ur (pair "Test2.ur")
     safeGet "Test2/main"
+    safeGet "Test2/finished"
+    safeGet "Test2/monitor"
+    safeGet "Test2/cleanup"
     allow mime "text/javascript"
     allow mime "text/css"
     database "dbname=Test2"

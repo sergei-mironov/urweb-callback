@@ -1,4 +1,3 @@
-
 fun template (mb:transaction xbody) : transaction page =
   b <- mb;
   return
@@ -7,12 +6,12 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
-fun finished (j:Callback.job) : transaction page =
+fun finished (j:Callback.jobref) : transaction page =
   return <xml/>
 
-fun monitor (j:Callback.job) = template (
+fun monitor (j:Callback.jobref) = template (
   f <- form {};
-  return
+  x <- (return
     <xml>
       Job : {[j]}
       <br/>
@@ -25,7 +24,11 @@ fun monitor (j:Callback.job) = template (
       Errors:  {[Callback.errors j]}
       <hr/>
       {f}
-    </xml>)
+      <br/>
+      <a link={cleanup j}>Cleanup job</a>
+    </xml>);
+  (* Callback.cleanup j; *)
+  return x)
 
 and handler (s:{UName:string}) : transaction page = 
   let
@@ -58,6 +61,17 @@ and form {} : transaction xbody =
         <submit action={handler}/>
       </form>
     </xml>
+
+and cleanup (j:Callback.jobref) = template (
+  Callback.cleanup j;
+  f <- form {};
+  return 
+    <xml>
+      Job is no more
+      <hr/>
+      {f}
+    </xml>)
+
     
 fun main {} : transaction page = template (
   f <- form {};

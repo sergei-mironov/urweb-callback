@@ -56,6 +56,10 @@ struct job {
     buf_read.resize(_bufsize);
   }
 
+  ~job() {
+    fprintf(stderr, "Bye-bye job #%d\n", key);
+  }
+
   jkey key;
 
   int pid = -1;
@@ -324,7 +328,9 @@ uw_Basis_unit uw_Callback_run(
 jptr* safe_find_job(struct uw_context *ctx, uw_Callback_jobref k)
 {
   jptr* pp = new jptr();
-  uw_push_cleanup(ctx, [](void* pp){ delete ((jptr*)pp);}, pp);
+  uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {
+      fprintf(stderr,"Cleanup handler has been called!\n");
+      delete ((jptr*)pp);});
 
   joblock l;
   jobmap& js(l.get());

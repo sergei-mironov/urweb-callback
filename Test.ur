@@ -7,11 +7,11 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
-fun job_finishead (j: Callback.job) : transaction page = 
+fun job_finishead (j: Callback.jobref) : transaction page = 
   debug ("Test.ur: job finished" ^ (show (Callback.exitcode j)));
   return <xml/>
 
-fun job_monitor (j:Callback.job) : transaction page = template (
+fun job_monitor (j:Callback.jobref) : transaction page = template (
   return <xml>
       Job : {[j]}
       <br/>
