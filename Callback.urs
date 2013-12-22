@@ -2,14 +2,15 @@
 type job
 type jobref = Basis.int
 
-val create : string -> string -> int -> transaction jobref
-val run: jobref -> url -> transaction unit
-val cleanup: jobref -> transaction unit
+val create : string -> string -> int -> transaction job
+val run: job -> url -> transaction unit
+val cleanup: job -> transaction unit
 
-val find : jobref -> job
+val tryDeref : jobref -> option job
+val deref : jobref -> job
 val ref : job -> jobref
 
-val pid : jobref -> int
-val exitcode : jobref -> int
-val stdout : jobref -> string
-val errors : jobref -> string
+val pid : job -> int
+val exitcode : job -> int
+val stdout : job -> string
+val errors : job -> string

@@ -1,3 +1,6 @@
+val gj = Callback.deref
+val ref = Callback.ref
+
 fun template (mb:transaction xbody) : transaction page =
   b <- mb;
   return
@@ -9,11 +12,12 @@ fun template (mb:transaction xbody) : transaction page =
 fun finished (j:Callback.jobref) : transaction page =
   return <xml/>
 
-fun monitor (j:Callback.jobref) = template (
+fun monitor (jr:Callback.jobref) = template (
+  j <- return (Callback.deref jr);
   f <- form {};
   x <- (return
     <xml>
-      Job : {[j]}
+      Job : {[jr]}
       <br/>
       Pid : {[Callback.pid j]}
       <br/>
@@ -25,9 +29,8 @@ fun monitor (j:Callback.jobref) = template (
       <hr/>
       {f}
       <br/>
-      <a link={cleanup j}>Cleanup job</a>
+      <a link={cleanup jr}>Cleanup job</a>
     </xml>);
-  (* Callback.cleanup j; *)
   return x)
 
 and handler (s:{UName:string}) : transaction page = 
@@ -35,8 +38,8 @@ and handler (s:{UName:string}) : transaction page =
 
     fun start {} : transaction xbody =
       j <- Callback.create s.UName "" 100;
-      Callback.run j (url (finished j));
-      redirect (url (monitor j))
+      Callback.run j (url (finished (ref j)));
+      redirect (url (monitor (ref j)))
 
     fun retry {} : transaction xbody = (
       f <- form {};
@@ -62,15 +65,20 @@ and form {} : transaction xbody =
       </form>
     </xml>
 
-and cleanup (j:Callback.jobref) = template (
-  Callback.cleanup j;
-  f <- form {};
-  return 
-    <xml>
-      Job is no more
-      <hr/>
-      {f}
-    </xml>)
+and cleanup (jr:Callback.jobref) = template (
+  o <- return (Callback.tryDeref jr);
+  case o of
+    Some j =>
+      Callback.cleanup j;
+      f <- form {};
+      return 
+        <xml>
+          Job {[Callback.ref j]} is no more
+          <hr/>
+          {f}
+        </xml>
+    | None =>
+      return <xml>No such job!</xml>)
 
     
 fun main {} : transaction page = template (

@@ -1,3 +1,5 @@
+val gj = Callback.deref
+val ref = Callback.ref
 
 fun template (mb:transaction xbody) : transaction page =
   b <- mb;
@@ -7,13 +9,14 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
-fun job_finishead (j: Callback.jobref) : transaction page = 
-  debug ("Test.ur: job finished" ^ (show (Callback.exitcode j)));
+fun job_finishead (jr: Callback.jobref) : transaction page = 
+  debug ("Test.ur: job finished" ^ (show (Callback.exitcode (gj jr))));
   return <xml/>
 
-fun job_monitor (j:Callback.jobref) : transaction page = template (
+fun job_monitor (jr:Callback.jobref) : transaction page = template (
+  let val j = Callback.deref jr in
   return <xml>
-      Job : {[j]}
+      Job : {[jr]}
       <br/>
       Pid : {[Callback.pid j]}
       <br/>
@@ -22,12 +25,13 @@ fun job_monitor (j:Callback.jobref) : transaction page = template (
       Stdout:  {[Callback.stdout j]}
       <br/>
       Errors:  {[Callback.errors j]}
-    </xml>)
+    </xml>
+  end)
 
 fun job_start {} : transaction page =
   j <- Callback.create "for i in `seq 1 1 15`; do echo -n $i; sleep 2 ; done" "" 100 ;
-  Callback.run j (url (job_finishead j));
-  redirect (url (job_monitor j))
+  Callback.run j (url (job_finishead (ref j)));
+  redirect (url (job_monitor (ref j)))
 
 fun main {} : transaction page = template (
   return

@@ -260,7 +260,7 @@ pthread_mutex_t joblock::m = PTHREAD_MUTEX_INITIALIZER;
 jobmap          joblock::jm;
 int             joblock::keys = 0;
 
-uw_Callback_jobref uw_Callback_create(
+uw_Callback_job uw_Callback_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
   uw_Basis_string _stdin,
@@ -274,42 +274,30 @@ uw_Callback_jobref uw_Callback_create(
                  stdout_sz));
 
   js.insert(js.end(), jobmap::value_type(j->key, j));
-  return j->key;
+
+  jptr* pp = new jptr(j);
+  uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {delete ((jptr*)pp);});
+  return pp;
 }
+
+jptr get(uw_Callback_job j) { return *((jptr*)j); }
 
 uw_Basis_unit uw_Callback_run(
   struct uw_context *ctx,
-  uw_Callback_jobref k,
-  uw_Basis_string _url)
+  uw_Callback_job _j,
+  uw_Basis_string _u)
 {
-  struct pack {
-    string url;
-    int key;
-  };
+  struct pack { string u; jptr j; };
 
-  uw_register_transactional(ctx, new pack {_url, k},
+  uw_register_transactional(ctx, new pack {_u, get(_j)},
       [](void* data) -> void {
         st_create(
           [](void* data) -> void* {
             pack *p = (pack*)data;
 
             try {
-
-              jptr j;
-
-              {
-                joblock l;
-                jobmap& js(l.get());
-
-                auto i = js.find(p->key);
-                if (i==js.end())
-                  throw job::exception("job not found");
-                j = i->second;
-              };
-
-              execute(j);
-
-              st_loopback_enqueue(p->url.c_str());
+              execute(p->j);
+              st_loopback_enqueue(p->u.c_str());
             }
             catch(job::exception &e) {
               fprintf(stderr,"Callback execute: %s\n", e.c_str());
@@ -325,85 +313,82 @@ uw_Basis_unit uw_Callback_run(
   return 0;
 }
 
-jptr* safe_find_job(struct uw_context *ctx, uw_Callback_jobref k)
-{
-  jptr* pp = new jptr();
-  uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {
-      fprintf(stderr,"Cleanup handler has been called!\n");
-      delete ((jptr*)pp);});
-
-  joblock l;
-  jobmap& js(l.get());
-
-  jobmap::iterator j = js.find(k);
-  if (j == js.end())
-    return NULL;
-  *pp = j->second;
-  return pp;
-}
-
-uw_Basis_unit uw_Callback_cleanup(struct uw_context *ctx, uw_Callback_jobref k)
+uw_Basis_unit uw_Callback_cleanup(struct uw_context *ctx, uw_Callback_job j)
 {
   joblock l;
   jobmap &js(l.get());
 
-  auto j = js.find((uw_Callback_jobref)k);
-  if (j != js.end()) {
-    js.erase(j);
+  auto i = js.find(get(j)->key);
+  if (i != js.end()) {
+    js.erase(i);
   }
 }
 
-uw_Basis_int uw_Callback_exitcode(struct uw_context *ctx, uw_Callback_jobref k)
+uw_Callback_job* uw_Callback_tryDeref(struct uw_context *ctx, uw_Callback_jobref k)
 {
-  jptr *p = safe_find_job(ctx, k);
-  if(!p)
-    return -1;
+  uw_Callback_job pp = NULL;
 
-  return (*p)->exitcode;
-}
+  {
+    joblock l;
+    jobmap& js(l.get());
 
-uw_Basis_int uw_Callback_pid(struct uw_context *ctx, uw_Callback_jobref k)
-{
-  jptr *p = safe_find_job(ctx, k);
-  if(!p)
-    return -1;
-
-  return (*p)->pid;
-}
-
-uw_Basis_string uw_Callback_stdout(struct uw_context *ctx, uw_Callback_jobref k)
-{
-  jptr *p = safe_find_job(ctx, k);
-  if(!p) {
-    char* null = (char*)uw_malloc(ctx, 1);
-    null[0] = 0;
-    return null;
+    jobmap::iterator j = js.find(k);
+    if (j != js.end())
+      pp = new jptr(j->second);
+    else
+      pp = NULL;
   }
 
-  jptr &j = *p;
-  size_t sz = j->total_read;
+  if(pp) {
+    uw_Callback_job* pp2 = (uw_Callback_job*)uw_malloc(ctx, sizeof(uw_Callback_job*));
+    uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {delete ((jptr*)pp);});
+    *pp2 = pp;
+    return pp2;
+  }
+
+  return NULL;
+}
+
+uw_Callback_job uw_Callback_deref(struct uw_context *ctx, uw_Callback_jobref k)
+{
+  uw_Callback_job* pp = uw_Callback_tryDeref(ctx, k);
+
+  if(!pp)
+    uw_error(ctx, FATAL, "No such job #%d", k);
+
+  return *pp;
+}
+
+uw_Basis_int uw_Callback_exitcode(struct uw_context *ctx, uw_Callback_job j)
+{
+  return get(j)->exitcode;
+}
+
+uw_Basis_int uw_Callback_pid(struct uw_context *ctx, uw_Callback_job j)
+{
+  return get(j)->pid;
+}
+
+uw_Callback_jobref uw_Callback_ref(struct uw_context *ctx, uw_Callback_job j)
+{
+  return get(j)->key;
+}
+
+uw_Basis_string uw_Callback_stdout(struct uw_context *ctx, uw_Callback_job j)
+{
+  size_t sz = get(j)->total_read;
   char* str = (char*)uw_malloc(ctx, sz + 1);
-  memcpy(str, j->buf_read.data(), sz);
+  memcpy(str, get(j)->buf_read.data(), sz);
   str[sz] = 0;
   return str;
 }
 
-uw_Basis_string uw_Callback_errors(struct uw_context *ctx, uw_Callback_jobref k)
+uw_Basis_string uw_Callback_errors(struct uw_context *ctx, uw_Callback_job j)
 {
-  char* null = (char*)uw_malloc(ctx, 1);
-  null[0] = 0;
-
-  jptr *p = safe_find_job(ctx, k);
-  if(!p) {
-    return null;
-  }
-
-  jptr &j = *p;
-
   // FIXME: not thread-safe!!
-  size_t sz = j->err.str().length();
+  size_t sz = get(j)->err.str().length();
   char* str = (char*)uw_malloc(ctx, sz + 1);
-  memcpy(str, j->err.str().c_str(), sz);
+  memcpy(str, get(j)->err.str().c_str(), sz);
   str[sz] = 0;
   return str;
 }
