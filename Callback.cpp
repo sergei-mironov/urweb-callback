@@ -91,7 +91,10 @@ struct job {
 
 typedef std::shared_ptr<job> jptr;
 
-static void execute(jptr r)/*{{{*/
+/*{{{*/
+
+/* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
+static void execute(jptr r)
 {
 
   uw_System_pipe ur_to_cmd;
@@ -302,24 +305,28 @@ uw_Basis_unit uw_Callback_run(
   struct pack { string u; jptr j; };
 
   uw_register_transactional(ctx, new pack {_u, get(_j)},
-      [](void* data) {
-        st_create(
-          [](void* data) -> void* {
-            pack *p = (pack*)data;
+    [](void* data) {
+      st_create(
+        [](void* data) -> void* {
+          pack *p = (pack*)data;
 
-            try {
-              execute(p->j);
-              st_loopback_enqueue(p->u.c_str());
-            }
-            catch(job::exception &e) {
-              fprintf(stderr,"Callback execute: %s\n", e.c_str());
-            }
-            delete (pack*)p;
-            return NULL;
-          }, data);
+          try {
+            execute(p->j);
+            st_loopback_enqueue(p->u.c_str());
+          }
+          catch(job::exception &e) {
+            fprintf(stderr,"Callback execute: %s\n", e.c_str());
+          }
+          delete (pack*)p;
+          return NULL;
+        }, data);
 
-        return;
-      }, [](void *p) {delete (pack*)p;}, NULL );
+      return;
+    },
+    [](void *p) {
+      delete (pack*)p;
+    },
+    NULL );
 
   return 0;
 }
