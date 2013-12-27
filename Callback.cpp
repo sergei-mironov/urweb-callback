@@ -260,6 +260,8 @@ pthread_mutex_t joblock::m = PTHREAD_MUTEX_INITIALIZER;
 jobmap          joblock::jm;
 int             joblock::keys = 0;
 
+jptr get(uw_Callback_job j) { return *((jptr*)j); }
+
 uw_Callback_job uw_Callback_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
@@ -276,11 +278,21 @@ uw_Callback_job uw_Callback_create(
   js.insert(js.end(), jobmap::value_type(j->key, j));
 
   jptr* pp = new jptr(j);
-  uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {delete ((jptr*)pp);});
+  uw_register_transactional(ctx, pp, NULL,
+    [] (void *pp) {
+      joblock l;
+      jobmap &js(l.get());
+
+      auto i = js.find(get(pp)->key);
+      if (i != js.end()) {
+        js.erase(i);
+      }
+    },
+    [](void* pp, int) {
+      delete ((jptr*)pp);
+    });
   return pp;
 }
-
-jptr get(uw_Callback_job j) { return *((jptr*)j); }
 
 uw_Basis_unit uw_Callback_run(
   struct uw_context *ctx,

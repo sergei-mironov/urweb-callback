@@ -26,7 +26,7 @@ fun monitor (jr:Callback.jobref) =
   ch <- channel;
   dml(INSERT INTO t (Id,Chan) VALUES ({[ref j]},{[ch]}));
   f <- form {};
-  s <- source <xml>{[Callback.stdout j]}</xml>;
+  s <- source <xml> == {[Callback.stdout j]} == </xml>;
   let
     fun check {} = 
       stdout <- recv ch;
@@ -56,30 +56,31 @@ fun monitor (jr:Callback.jobref) =
       </xml>
     end
 
-and handler (s:{UName:string}) : transaction page = 
-  let
-
-    fun start {} : transaction xbody =
-      j <- Callback.create s.UName "" 100;
-      Callback.run j (url (finished (ref j)));
-      redirect (url (monitor (ref j)))
-
-    fun retry {} : transaction xbody = (
-      f <- form {};
-      return
-        <xml>
-          String is empty, try again
-          <hr/>
-          {f}
-        </xml>)
-  in
-    template (
-      case s.UName = "" of
-          True => retry {}
-        | False => start {})
-  end
-
 and form {} : transaction xbody = 
+  let
+    fun handler (s:{UName:string}) : transaction page = 
+      let
+
+        fun start {} : transaction xbody =
+          j <- Callback.create s.UName "" 100;
+          Callback.run j (url (finished (ref j)));
+          redirect (url (monitor (ref j)))
+
+        fun retry {} : transaction xbody = (
+          f <- form {};
+          return
+            <xml>
+              String is empty, try again
+              <hr/>
+              {f}
+            </xml>)
+      in
+        template (
+          case s.UName = "" of
+              True => retry {}
+            | False => start {})
+      end
+  in
   return
     <xml>
       <form>
@@ -87,6 +88,7 @@ and form {} : transaction xbody =
         <submit action={handler}/>
       </form>
     </xml>
+  end
 
 and cleanup (jr:Callback.jobref) = template (
   o <- Callback.tryDeref jr;

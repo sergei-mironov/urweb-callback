@@ -8,10 +8,8 @@ allow mime text/javascript
 allow mime text/css
 database dbname=Test
 sql ./Test.sql
+library .
 debug
-ffi ./Callback
-include ./Callback.h
-link -lstdc++ ./Callback.o
 
 $/option
 ./Test

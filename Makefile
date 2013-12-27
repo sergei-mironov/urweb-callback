@@ -14,20 +14,24 @@ URVERSION = $(shell urweb -version)
 all: ./Test.exe ./Test.sql ./Test2.db ./Test2.exe ./Test2.sql
 .PHONY: clean
 clean: 
-	rm -rf .cake3 ./Callback.o ./Test.sql ./Test.exe
+	rm -rf .cake3 ./Test.sql ./Test.exe
 ./Test2.db: ./Test2.exe ./Test2.sql
 	rm ./Test2.db
 	sqlite3 ./Test2.db < ./Test2.sql
 ./Test2.exe: .fix-multy2
 ./Test2.urp: ./Test2.urp.in
 	cat ./Test2.urp.in > ./Test2.urp
-./Test2.urp.in: ./Callback.h ./Callback.o ./Test2.ur ./Test2.urs
+./Test2.urp.in: ./Test2.ur ./Test2.urs ./lib.urp
 	touch ./Test2.urp.in
 ./Test.exe: .fix-multy1
 ./Test.urp: ./Test.urp.in
 	cat ./Test.urp.in > ./Test.urp
-./Test.urp.in: ./Callback.h ./Callback.o ./Test.ur ./Test.urs
+./Test.urp.in: ./Test.ur ./Test.urs ./lib.urp
 	touch ./Test.urp.in
+./lib.urp: ./lib.urp.in
+	cat ./lib.urp.in > ./lib.urp
+./lib.urp.in: ./Callback.h ./Callback.o
+	touch ./lib.urp.in
 ./Callback.o: ./Callback.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
 	$(URCPP) -c $(URINCL) -std=c++11 -o ./Callback.o ./Callback.cpp
 ./Test.sql: .fix-multy1
@@ -70,6 +74,10 @@ clean: .fix-multy1
 ./Test.urp: .fix-multy1
 .PHONY: ./Test.urp.in
 ./Test.urp.in: .fix-multy1
+.PHONY: ./lib.urp
+./lib.urp: .fix-multy1
+.PHONY: ./lib.urp.in
+./lib.urp.in: .fix-multy1
 .PHONY: ./Callback.o
 ./Callback.o: .fix-multy1
 .PHONY: ./Test.sql

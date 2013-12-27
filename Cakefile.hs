@@ -7,6 +7,10 @@ import Cakefile_P
 instance IsString File where fromString = file
 
 project = do
+  l <- uwlib "lib.urp" $ do
+    ffi "Callback.urs"
+    include "Callback.h"
+    csrc' "Callback.cpp" "-std=c++11" "-lstdc++"
 
   a <- uwapp "-dbms sqlite" "Test.urp" $ do
     ur (sys "option")
@@ -21,10 +25,8 @@ project = do
     allow mime "text/css"
     database "dbname=Test"
     sql "Test.sql"
+    library l
     debug
-    ffi "Callback.urs"
-    include "Callback.h"
-    csrc' "Callback.cpp" "-std=c++11" "-lstdc++"
 
   a2 <- uwapp "-dbms sqlite" "Test2.urp" $ do
     ur (pair "Test2.ur")
@@ -37,10 +39,8 @@ project = do
     allow mime "text/css"
     database "dbname=Test2.db"
     sql "Test2.sql"
+    library l
     debug
-    ffi "Callback.urs"
-    include "Callback.h"
-    csrc' "Callback.cpp" "-std=c++11" "-lstdc++"
 
   db2 <- rule $do
     let db = file "Test2.db"

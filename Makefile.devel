@@ -14,20 +14,24 @@ URVERSION = $(shell urweb -version)
 all: ./Makefile.devel ./Test.exe ./Test.sql ./Test2.db ./Test2.exe ./Test2.sql
 .PHONY: clean
 clean: ./Makefile.devel
-	rm -rf .cake3 ./Callback.o ./Test.sql ./Test.exe
+	rm -rf .cake3 ./Test.sql ./Test.exe
 ./Test2.db: ./Makefile.devel ./Test2.exe ./Test2.sql
 	rm ./Test2.db
 	sqlite3 ./Test2.db < ./Test2.sql
 ./Test2.exe: .fix-multy2
 ./Test2.urp: ./Makefile.devel ./Test2.urp.in
 	cat ./Test2.urp.in > ./Test2.urp
-./Test2.urp.in: ./Callback.h ./Callback.o ./Makefile.devel ./Test2.ur ./Test2.urs
+./Test2.urp.in: ./Makefile.devel ./Test2.ur ./Test2.urs ./lib.urp
 	touch ./Test2.urp.in
 ./Test.exe: .fix-multy1
 ./Test.urp: ./Makefile.devel ./Test.urp.in
 	cat ./Test.urp.in > ./Test.urp
-./Test.urp.in: ./Callback.h ./Callback.o ./Makefile.devel ./Test.ur ./Test.urs
+./Test.urp.in: ./Makefile.devel ./Test.ur ./Test.urs ./lib.urp
 	touch ./Test.urp.in
+./lib.urp: ./Makefile.devel ./lib.urp.in
+	cat ./lib.urp.in > ./lib.urp
+./lib.urp.in: ./Callback.h ./Callback.o ./Makefile.devel
+	touch ./lib.urp.in
 ./Cakegen: ./Cakefile.hs
 	cake3
 ./Callback.o: ./Callback.cpp ./Makefile.devel $(call GUARD,URCPP) $(call GUARD,URINCL)
@@ -74,6 +78,10 @@ clean: .fix-multy1
 ./Test.urp: .fix-multy1
 .PHONY: ./Test.urp.in
 ./Test.urp.in: .fix-multy1
+.PHONY: ./lib.urp
+./lib.urp: .fix-multy1
+.PHONY: ./lib.urp.in
+./lib.urp.in: .fix-multy1
 .PHONY: ./Cakegen
 ./Cakegen: .fix-multy1
 .PHONY: ./Callback.o

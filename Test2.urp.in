@@ -7,9 +7,7 @@ allow mime text/javascript
 allow mime text/css
 database dbname=Test2.db
 sql ./Test2.sql
+library .
 debug
-ffi ./Callback
-include ./Callback.h
-link -lstdc++ ./Callback.o
 
 ./Test2
