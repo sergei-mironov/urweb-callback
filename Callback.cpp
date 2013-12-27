@@ -290,7 +290,7 @@ uw_Basis_unit uw_Callback_run(
   struct pack { string u; jptr j; };
 
   uw_register_transactional(ctx, new pack {_u, get(_j)},
-      [](void* data) -> void {
+      [](void* data) {
         st_create(
           [](void* data) -> void* {
             pack *p = (pack*)data;
@@ -302,26 +302,29 @@ uw_Basis_unit uw_Callback_run(
             catch(job::exception &e) {
               fprintf(stderr,"Callback execute: %s\n", e.c_str());
             }
-
-            delete p;
+            delete (pack*)p;
             return NULL;
           }, data);
 
         return;
-      }, NULL, NULL);
+      }, [](void *p) {delete (pack*)p;}, NULL );
 
   return 0;
 }
 
 uw_Basis_unit uw_Callback_cleanup(struct uw_context *ctx, uw_Callback_job j)
 {
-  joblock l;
-  jobmap &js(l.get());
+  uw_register_transactional(ctx, j,
+    [](uw_Callback_job j) {
+      joblock l;
+      jobmap &js(l.get());
 
-  auto i = js.find(get(j)->key);
-  if (i != js.end()) {
-    js.erase(i);
-  }
+      auto i = js.find(get(j)->key);
+      if (i != js.end()) {
+        js.erase(i);
+      }
+    }, NULL, NULL);
+  return 0;
 }
 
 uw_Callback_job* uw_Callback_tryDeref(struct uw_context *ctx, uw_Callback_jobref k)

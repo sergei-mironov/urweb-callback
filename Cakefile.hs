@@ -32,14 +32,20 @@ project = do
     safeGet "Test2/finished"
     safeGet "Test2/monitor"
     safeGet "Test2/cleanup"
+    safeGet "Test2/sendch"
     allow mime "text/javascript"
     allow mime "text/css"
-    database "dbname=Test2"
+    database "dbname=Test2.db"
     sql "Test2.sql"
     debug
     ffi "Callback.urs"
     include "Callback.h"
     csrc' "Callback.cpp" "-std=c++11" "-lstdc++"
+
+  db2 <- rule $do
+    let db = file "Test2.db"
+    shell [cmd|rm @db|]
+    shell [cmd|sqlite3 @db < $(urpSql (toUrp a2)) |]
 
   rule $ do
     phony "clean"
@@ -49,6 +55,7 @@ project = do
     phony "all"
     depend a
     depend a2
+    depend db2
 
 main = do
   writeMake (file "Makefile") (project)

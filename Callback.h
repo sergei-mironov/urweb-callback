@@ -7,7 +7,14 @@ extern "C" {
 #endif
 
 
+/* A pointer to the _real_ pointer which keeps the ref counting. Full
+ * specification would be
+ *
+ * typedef shared_ptr<job>* uw_Callback_job
+ *
+ */
 typedef void* uw_Callback_job;
+
 typedef int uw_Callback_jobref;
 
 uw_Callback_job uw_Callback_create(

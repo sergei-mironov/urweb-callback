@@ -11,10 +11,13 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Makefile.devel ./Test.exe ./Test.sql ./Test2.exe ./Test2.sql
+all: ./Makefile.devel ./Test.exe ./Test.sql ./Test2.db ./Test2.exe ./Test2.sql
 .PHONY: clean
 clean: ./Makefile.devel
 	rm -rf .cake3 ./Callback.o ./Test.sql ./Test.exe
+./Test2.db: ./Makefile.devel ./Test2.exe ./Test2.sql
+	rm ./Test2.db
+	sqlite3 ./Test2.db < ./Test2.sql
 ./Test2.exe: .fix-multy2
 ./Test2.urp: ./Makefile.devel ./Test2.urp.in
 	cat ./Test2.urp.in > ./Test2.urp
@@ -57,6 +60,8 @@ else
 all: .fix-multy1
 .PHONY: clean
 clean: .fix-multy1
+.PHONY: ./Test2.db
+./Test2.db: .fix-multy1
 .PHONY: ./Test2.exe
 ./Test2.exe: .fix-multy1
 .PHONY: ./Test2.urp

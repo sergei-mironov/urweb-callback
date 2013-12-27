@@ -1,3 +1,5 @@
+table t : { Id : int , Chan : channel string }
+
 val gj = Callback.deref
 val ref = Callback.ref
 
@@ -9,29 +11,50 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
-fun finished (j:Callback.jobref) : transaction page =
+fun finished (jr:Callback.jobref) : transaction page =
+  debug "finished callback has been called";
+  j <- Callback.deref jr;
+  s <- query1 (SELECT * FROM t WHERE t.Id = {[jr]}) (fn r s =>
+    ch <- (return r.Chan);
+    send ch (Callback.stdout j);
+    return (s+1)) 0;
+  debug ("Stdout has been sent to a " ^ (show s) ^ " clients ");
   return <xml/>
 
-fun monitor (jr:Callback.jobref) = template (
+fun monitor (jr:Callback.jobref) =
   j <- Callback.deref jr;
+  ch <- channel;
+  dml(INSERT INTO t (Id,Chan) VALUES ({[ref j]},{[ch]}));
   f <- form {};
-  x <- (return
-    <xml>
-      Job : {[jr]}
-      <br/>
-      Pid : {[Callback.pid j]}
-      <br/>
-      ExitCode : {[Callback.exitcode j]}
-      <br/>
-      Stdout:  {[Callback.stdout j]}
-      <br/>
-      Errors:  {[Callback.errors j]}
-      <hr/>
-      {f}
-      <br/>
-      <a link={cleanup jr}>Cleanup job</a>
-    </xml>);
-  return x)
+  s <- source <xml>{[Callback.stdout j]}</xml>;
+  let
+    fun check {} = 
+      stdout <- recv ch;
+      alert stdout;
+      set s <xml>{[stdout]}</xml>;
+      check {}
+  in
+    return
+      <xml>
+        <head/>
+        <body onload={check {}}>
+          Job : {[jr]}
+          <br/>
+          Pid : {[Callback.pid j]}
+          <br/>
+          ExitCode : {[Callback.exitcode j]}
+          <br/>
+          <dyn signal={signal s}/>
+          <br/>
+          (* Errors:  {[Callback.errors j]} *)
+          (* <hr/> *)
+          {f}
+          <br/>
+          <a link={monitor jr}>Refresh</a>
+          <a link={cleanup jr}>Cleanup job</a>
+        </body>
+      </xml>
+    end
 
 and handler (s:{UName:string}) : transaction page = 
   let
