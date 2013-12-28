@@ -35,6 +35,7 @@ uw_Callback_jobref uw_Callback_ref(struct uw_context *ctx, uw_Callback_job j);
 uw_Basis_int uw_Callback_pid(struct uw_context *ctx, uw_Callback_job t);
 uw_Basis_int uw_Callback_exitcode(struct uw_context *ctx, uw_Callback_job t);
 uw_Basis_string uw_Callback_stdout(struct uw_context *ctx, uw_Callback_job t);
+uw_Basis_string uw_Callback_command(struct uw_context *ctx, uw_Callback_job t);
 uw_Basis_unit uw_Callback_cleanup(struct uw_context *ctx, uw_Callback_job t);
 uw_Basis_string uw_Callback_errors(struct uw_context *ctx, uw_Callback_job t);
 

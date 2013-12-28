@@ -13,4 +13,5 @@ val ref : job -> jobref
 val pid : job -> int
 val exitcode : job -> int
 val stdout : job -> string
+val cmd : job -> string
 val errors : job -> string

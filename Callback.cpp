@@ -405,6 +405,15 @@ uw_Basis_string uw_Callback_stdout(struct uw_context *ctx, uw_Callback_job j)
   return str;
 }
 
+uw_Basis_string uw_Callback_command(struct uw_context *ctx, uw_Callback_job j)
+{
+  size_t sz = get(j)->cmd.length();
+  char* str = (char*)uw_malloc(ctx, sz + 1);
+  memcpy(str, get(j)->cmd.c_str(), sz);
+  str[sz] = 0;
+  return str;
+}
+
 uw_Basis_string uw_Callback_errors(struct uw_context *ctx, uw_Callback_job j)
 {
   // FIXME: not thread-safe!!

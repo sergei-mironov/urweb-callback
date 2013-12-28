@@ -1,0 +1,5 @@
+ffi ./Callback
+include ./Callback.h
+link -lstdc++
+link ./Callback.o
+
