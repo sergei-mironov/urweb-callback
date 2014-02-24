@@ -15,12 +15,12 @@ project = do
   a <- uwapp "-dbms sqlite" "Test.urp" $ do
     ur (sys "option")
     ur (pair "Test.ur")
-    safeGet "Test/main"
-    safeGet "Test/main_ru"
-    safeGet "Test/job_monitor"
-    safeGet "Test/main_en"
-    safeGet "Test/handler_get"
-    safeGet "Test/job_start"
+    safeGet "Test.ur" "main"
+    safeGet "Test.ur" "main_ru"
+    safeGet "Test.ur" "job_monitor"
+    safeGet "Test.ur" "main_en"
+    safeGet "Test.ur" "handler_get"
+    safeGet "Test.ur" "job_start"
     allow mime "text/javascript"
     allow mime "text/css"
     database "dbname=Test"
@@ -30,11 +30,11 @@ project = do
 
   a2 <- uwapp "-dbms sqlite" "Test2.urp" $ do
     ur (pair "Test2.ur")
-    safeGet "Test2/main"
-    safeGet "Test2/finished"
-    safeGet "Test2/monitor"
-    safeGet "Test2/cleanup"
-    safeGet "Test2/sendch"
+    safeGet "Test2.ur" "main"
+    safeGet "Test2.ur" "finished"
+    safeGet "Test2.ur" "monitor"
+    safeGet "Test2.ur" "cleanup"
+    safeGet "Test2.ur" "sendch"
     allow mime "text/javascript"
     allow mime "text/css"
     database "dbname=Test2.db"
@@ -44,7 +44,7 @@ project = do
 
   db2 <- rule $do
     let db = file "Test2.db"
-    shell [cmd|rm @db|]
+    shell [cmd|-rm @db|]
     shell [cmd|sqlite3 @db < $(urpSql (toUrp a2)) |]
 
   rule $ do

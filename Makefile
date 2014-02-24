@@ -3,7 +3,8 @@
 
 GUARD = .cake3/GUARD_$(1)_$(shell echo $($(1)) | md5sum | cut -d ' ' -f 1)
 
-ifdef MAIN
+ifeq ($(MAIN),1)
+unexport MAIN
 
 # Main section
 
@@ -16,7 +17,7 @@ all: ./Test.exe ./Test.sql ./Test2.db ./Test2.exe ./Test2.sql
 clean: 
 	rm -rf .cake3 ./Test.sql ./Test.exe
 ./Test2.db: ./Test2.exe ./Test2.sql
-	rm ./Test2.db
+	-rm ./Test2.db
 	sqlite3 ./Test2.db < ./Test2.sql
 ./Test2.exe: .fix-multy2
 ./Test2.urp: ./Test2.urp.in
@@ -56,6 +57,8 @@ else
 
 # Prebuild/postbuild section
 
+export MAIN=1
+
 .PHONY: all
 all: .fix-multy1
 .PHONY: clean
@@ -87,6 +90,6 @@ clean: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3
-	$(MAKE) -f ./Makefile MAIN=1 $(MAKECMDGOALS)
+	$(MAKE) -f ./Makefile $(MAKECMDGOALS)
 
 endif
