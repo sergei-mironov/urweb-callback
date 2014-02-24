@@ -27,8 +27,11 @@ fun job_monitor (jr:Callback.jobref) : transaction page = template (
       Errors:  {[Callback.errors j]}
     </xml>)
 
+sequence jobrefs
+
 fun job_start {} : transaction page =
-  j <- Callback.create "for i in `seq 1 1 15`; do echo -n $i; sleep 2 ; done" "" 100 ;
+  jr <- nextval jobrefs;
+  j <- Callback.create "for i in `seq 1 1 15`; do echo -n $i; sleep 2 ; done" "" 100 jr;
   Callback.run j (url (job_finishead (ref j)));
   redirect (url (job_monitor (ref j)))
 

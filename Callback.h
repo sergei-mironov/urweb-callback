@@ -21,7 +21,8 @@ uw_Callback_job uw_Callback_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
   uw_Basis_string _stdin,
-  uw_Basis_int stdout_sz);
+  uw_Basis_int stdout_sz,
+  uw_Basis_int jobref);
 
 uw_Basis_unit uw_Callback_run(
   struct uw_context *ctx,

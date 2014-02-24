@@ -2,7 +2,7 @@
 type job
 type jobref = Basis.int
 
-val create : string -> string -> int -> transaction job
+val create : string -> string -> int -> int -> transaction job
 val run: job -> url -> transaction unit
 val cleanup: job -> transaction unit
 

@@ -269,11 +269,12 @@ uw_Callback_job uw_Callback_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
   uw_Basis_string _stdin,
-  uw_Basis_int stdout_sz)
+  uw_Basis_int stdout_sz,
+  uw_Basis_int jr)
 {
   joblock l;
   jobmap& js(l.get());
-  jptr j(new job(l.nextkey(),
+  jptr j(new job(jr,
                  cmd,
                  blob(_stdin, _stdin+strlen(_stdin)),
                  stdout_sz));

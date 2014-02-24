@@ -3,6 +3,8 @@ table t : { Id : int , Chan : channel string }
 val gj = Callback.deref
 val ref = Callback.ref
 
+sequence jobrefs
+
 fun template (mb:transaction xbody) : transaction page =
   b <- mb;
   return
@@ -62,7 +64,8 @@ and form {} : transaction xbody =
       let
 
         fun start {} : transaction xbody =
-          j <- Callback.create s.UName "" 100;
+          jr <- nextval jobrefs;
+          j <- Callback.create s.UName "" 100 jr;
           Callback.run j (url (finished (ref j)));
           redirect (url (monitor (ref j)))
 
