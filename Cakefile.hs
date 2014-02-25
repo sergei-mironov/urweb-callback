@@ -7,12 +7,14 @@ import Cakefile_P
 instance IsString File where fromString = file
 
 project = do
+  let dbn = "urweb-callback-db"
+
   l <- uwlib "lib.urp" $ do
     ffi "Callback.urs"
     include "Callback.h"
     csrc' "Callback.cpp" "-std=c++11" "-lstdc++"
 
-  a <- uwapp "-dbms sqlite" "Test.urp" $ do
+  a <- uwapp "-dbms postgres" "Test.urp" $ do
     ur (sys "option")
     ur (pair "Test.ur")
     safeGet "Test.ur" "main"
@@ -23,12 +25,12 @@ project = do
     safeGet "Test.ur" "job_start"
     allow mime "text/javascript"
     allow mime "text/css"
-    database "dbname=Test"
+    database ("dbname="++dbn)
     sql "Test.sql"
     library l
     debug
 
-  a2 <- uwapp "-dbms sqlite" "Test2.urp" $ do
+  a2 <- uwapp "-dbms postgres" "Test2.urp" $ do
     ur (pair "Test2.ur")
     safeGet "Test2.ur" "main"
     safeGet "Test2.ur" "finished"
@@ -37,15 +39,16 @@ project = do
     safeGet "Test2.ur" "sendch"
     allow mime "text/javascript"
     allow mime "text/css"
-    database "dbname=Test2.db"
+    database ("dbname="++dbn)
     sql "Test2.sql"
     library l
     debug
 
-  db2 <- rule $do
-    let db = file "Test2.db"
-    shell [cmd|-rm @db|]
-    shell [cmd|sqlite3 @db < $(urpSql (toUrp a2)) |]
+  db2 <- rule $ do
+    phony "db"
+    shell [cmd|dropdb --if-exists $(string dbn)|]
+    shell [cmd|createdb $(string dbn)|]
+    shell [cmd|psql -f $(urpSql (toUrp a2)) $(string dbn)|]
 
   rule $ do
     phony "clean"
@@ -55,7 +58,6 @@ project = do
     phony "all"
     depend a
     depend a2
-    depend db2
 
 main = do
   writeMake (file "Makefile") (project)

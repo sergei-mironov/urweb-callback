@@ -12,13 +12,15 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Test.exe ./Test.sql ./Test2.db ./Test2.exe ./Test2.sql
+all: ./Test.exe ./Test.sql ./Test2.exe ./Test2.sql
 .PHONY: clean
 clean: 
 	rm -rf .cake3 ./Test.sql ./Test.exe
-./Test2.db: ./Test2.exe ./Test2.sql
-	-rm ./Test2.db
-	sqlite3 ./Test2.db < ./Test2.sql
+.PHONY: db
+db: ./Test2.exe ./Test2.sql
+	dropdb --if-exists urweb-callback-db
+	createdb urweb-callback-db
+	psql -f ./Test2.sql urweb-callback-db
 ./Test2.exe: .fix-multy2
 ./Test2.urp: ./Test2.urp.in
 	cat ./Test2.urp.in > ./Test2.urp
@@ -39,10 +41,10 @@ clean:
 ./Test2.sql: .fix-multy2
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: ./Test.urp $(call GUARD,URVERSION)
-	urweb -dbms sqlite ./Test
+	urweb -dbms postgres ./Test
 .INTERMEDIATE: .fix-multy2
 .fix-multy2: ./Test2.urp $(call GUARD,URVERSION)
-	urweb -dbms sqlite ./Test2
+	urweb -dbms postgres ./Test2
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -63,8 +65,8 @@ export MAIN=1
 all: .fix-multy1
 .PHONY: clean
 clean: .fix-multy1
-.PHONY: ./Test2.db
-./Test2.db: .fix-multy1
+.PHONY: db
+db: .fix-multy1
 .PHONY: ./Test2.exe
 ./Test2.exe: .fix-multy1
 .PHONY: ./Test2.urp

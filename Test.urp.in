@@ -6,7 +6,7 @@ safeGet Test/handler_get
 safeGet Test/job_start
 allow mime text/javascript
 allow mime text/css
-database dbname=Test
+database dbname=urweb-callback-db
 sql ./Test.sql
 library .
 debug

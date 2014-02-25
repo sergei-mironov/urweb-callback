@@ -4,6 +4,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <signal.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -54,10 +55,13 @@ struct job {
   job(jkey _key, const string &_cmd, const blob &_buf_write, int _bufsize) :
 		key(_key), cmd(_cmd), buf_write(_buf_write) {
     buf_read.resize(_bufsize);
+    //fprintf(stderr, "Hello job #%d\n", key);
+    //raise(SIGINT);
   }
 
   ~job() {
     fprintf(stderr, "Bye-bye job #%d\n", key);
+    //raise(SIGINT);
   }
 
   jkey key;

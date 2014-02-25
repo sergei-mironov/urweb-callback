@@ -5,7 +5,7 @@ safeGet Test2/cleanup
 safeGet Test2/sendch
 allow mime text/javascript
 allow mime text/css
-database dbname=Test2.db
+database dbname=urweb-callback-db
 sql ./Test2.sql
 library .
 debug
