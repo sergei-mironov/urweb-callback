@@ -35,7 +35,7 @@ all: ./Makefile.devel ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/T
 	touch ./test/Test1.urp.in
 ./lib.urp: ./Makefile.devel ./lib.urp.in
 	cat ./lib.urp.in > ./lib.urp
-./lib.urp.in: ./CallbackFFI.h ./CallbackFFI.o ./Makefile.devel
+./lib.urp.in: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./Makefile.devel
 	touch ./lib.urp.in
 ./Cakegen: ./Cakefile.hs
 	cake3

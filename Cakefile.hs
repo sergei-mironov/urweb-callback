@@ -12,6 +12,7 @@ project = do
     ffi "CallbackFFI.urs"
     include "CallbackFFI.h"
     csrc' "CallbackFFI.cpp" "-std=c++11" "-lstdc++"
+    ur (pair "Callback.ur")
 
   let tests = [ "test/Test1.urp"
               , "test/Test2.urp"

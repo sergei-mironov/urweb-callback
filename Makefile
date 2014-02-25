@@ -35,7 +35,7 @@ all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Te
 	touch ./test/Test1.urp.in
 ./lib.urp: ./lib.urp.in
 	cat ./lib.urp.in > ./lib.urp
-./lib.urp.in: ./CallbackFFI.h ./CallbackFFI.o
+./lib.urp.in: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o
 	touch ./lib.urp.in
 ./CallbackFFI.o: ./CallbackFFI.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
 	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp

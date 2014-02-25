@@ -3,3 +3,4 @@ include ./CallbackFFI.h
 link ./CallbackFFI.o
 link -lstdc++
 
+./Callback
