@@ -7,57 +7,49 @@ import Cakefile_P
 instance IsString File where fromString = file
 
 project = do
-  let dbn = "urweb-callback-db"
 
   l <- uwlib "lib.urp" $ do
-    ffi "Callback.urs"
-    include "Callback.h"
-    csrc' "Callback.cpp" "-std=c++11" "-lstdc++"
+    ffi "CallbackFFI.urs"
+    include "CallbackFFI.h"
+    csrc' "CallbackFFI.cpp" "-std=c++11" "-lstdc++"
 
-  a <- uwapp "-dbms postgres" "Test.urp" $ do
-    ur (sys "option")
-    ur (pair "Test.ur")
-    safeGet "Test.ur" "main"
-    safeGet "Test.ur" "main_ru"
-    safeGet "Test.ur" "job_monitor"
-    safeGet "Test.ur" "main_en"
-    safeGet "Test.ur" "handler_get"
-    safeGet "Test.ur" "job_start"
-    allow mime "text/javascript"
-    allow mime "text/css"
-    database ("dbname="++dbn)
-    sql "Test.sql"
-    library l
-    debug
+  let tests = [ "test/Test1.urp"
+              , "test/Test2.urp"
+              ]
 
-  a2 <- uwapp "-dbms postgres" "Test2.urp" $ do
-    ur (pair "Test2.ur")
-    safeGet "Test2.ur" "main"
-    safeGet "Test2.ur" "finished"
-    safeGet "Test2.ur" "monitor"
-    safeGet "Test2.ur" "cleanup"
-    safeGet "Test2.ur" "sendch"
-    allow mime "text/javascript"
-    allow mime "text/css"
-    database ("dbname="++dbn)
-    sql "Test2.sql"
-    library l
-    debug
+  ts <- forM tests $ \t -> do
+    uwapp "-dbms postgres" t $ do
+      allow url "http://code.jquery.com/ui/1.10.3/jquery-ui.js";
+      allow mime "text/javascript";
+      allow mime "text/css";
+      allow mime "image/jpeg";
+      allow mime "image/png";
+      allow mime "image/gif";
+      database ("dbname="++(takeBaseName t))
+      safeGet (t.="ur") "main"
+      safeGet (t.="ur") "job_monitor"
+      safeGet (t.="ur") "job_start"
+      safeGet (t.="ur") "finished"
+      safeGet (t.="ur") "cleanup"
+      safeGet (t.="ur") "monitor"
+      sql (t.="sql")
+      library l
+      debug
+      ur (sys "list")
+      ur (pair (t.="ur"))
 
-  db2 <- rule $ do
-    phony "db"
+  dbs <- forM ts $ \t -> rule $ do
+    let sql = urpSql (toUrp t)
+    let dbn = takeBaseName sql
     shell [cmd|dropdb --if-exists $(string dbn)|]
     shell [cmd|createdb $(string dbn)|]
-    shell [cmd|psql -f $(urpSql (toUrp a2)) $(string dbn)|]
-
-  rule $ do
-    phony "clean"
-    unsafeShell [cmd|rm -rf .cake3 $(tempfiles a)|]
+    shell [cmd|psql -f $(sql) $(string dbn)|]
+    shell [cmd|touch @(sql.="db")|]
 
   rule $ do
     phony "all"
-    depend a
-    depend a2
+    depend ts
+    depend dbs
 
 main = do
   writeMake (file "Makefile") (project)

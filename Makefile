@@ -12,39 +12,41 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Test.exe ./Test.sql ./Test2.exe ./Test2.sql
-.PHONY: clean
-clean: 
-	rm -rf .cake3 ./Test.sql ./Test.exe
-.PHONY: db
-db: ./Test2.exe ./Test2.sql
-	dropdb --if-exists urweb-callback-db
-	createdb urweb-callback-db
-	psql -f ./Test2.sql urweb-callback-db
-./Test2.exe: .fix-multy2
-./Test2.urp: ./Test2.urp.in
-	cat ./Test2.urp.in > ./Test2.urp
-./Test2.urp.in: ./Test2.ur ./Test2.urs ./lib.urp
-	touch ./Test2.urp.in
-./Test.exe: .fix-multy1
-./Test.urp: ./Test.urp.in
-	cat ./Test.urp.in > ./Test.urp
-./Test.urp.in: ./Test.ur ./Test.urs ./lib.urp
-	touch ./Test.urp.in
+all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql
+./test/Test2.db: ./test/Test2.exe ./test/Test2.sql
+	dropdb --if-exists Test2
+	createdb Test2
+	psql -f ./test/Test2.sql Test2
+	touch ./test/Test2.db
+./test/Test1.db: ./test/Test1.exe ./test/Test1.sql
+	dropdb --if-exists Test1
+	createdb Test1
+	psql -f ./test/Test1.sql Test1
+	touch ./test/Test1.db
+./test/Test2.exe: .fix-multy2
+./test/Test2.urp: ./test/Test2.urp.in
+	cat ./test/Test2.urp.in > ./test/Test2.urp
+./test/Test2.urp.in: ./lib.urp ./test/Test2.ur ./test/Test2.urs
+	touch ./test/Test2.urp.in
+./test/Test1.exe: .fix-multy1
+./test/Test1.urp: ./test/Test1.urp.in
+	cat ./test/Test1.urp.in > ./test/Test1.urp
+./test/Test1.urp.in: ./lib.urp ./test/Test1.ur ./test/Test1.urs
+	touch ./test/Test1.urp.in
 ./lib.urp: ./lib.urp.in
 	cat ./lib.urp.in > ./lib.urp
-./lib.urp.in: ./Callback.h ./Callback.o
+./lib.urp.in: ./CallbackFFI.h ./CallbackFFI.o
 	touch ./lib.urp.in
-./Callback.o: ./Callback.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
-	$(URCPP) -c $(URINCL) -std=c++11 -o ./Callback.o ./Callback.cpp
-./Test.sql: .fix-multy1
-./Test2.sql: .fix-multy2
+./CallbackFFI.o: ./CallbackFFI.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
+	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
+./test/Test1.sql: .fix-multy1
+./test/Test2.sql: .fix-multy2
 .INTERMEDIATE: .fix-multy1
-.fix-multy1: ./Test.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./Test
+.fix-multy1: ./test/Test1.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test1
 .INTERMEDIATE: .fix-multy2
-.fix-multy2: ./Test2.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./Test2
+.fix-multy2: ./test/Test2.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test2
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -63,32 +65,32 @@ export MAIN=1
 
 .PHONY: all
 all: .fix-multy1
-.PHONY: clean
-clean: .fix-multy1
-.PHONY: db
-db: .fix-multy1
-.PHONY: ./Test2.exe
-./Test2.exe: .fix-multy1
-.PHONY: ./Test2.urp
-./Test2.urp: .fix-multy1
-.PHONY: ./Test2.urp.in
-./Test2.urp.in: .fix-multy1
-.PHONY: ./Test.exe
-./Test.exe: .fix-multy1
-.PHONY: ./Test.urp
-./Test.urp: .fix-multy1
-.PHONY: ./Test.urp.in
-./Test.urp.in: .fix-multy1
+.PHONY: ./test/Test2.db
+./test/Test2.db: .fix-multy1
+.PHONY: ./test/Test1.db
+./test/Test1.db: .fix-multy1
+.PHONY: ./test/Test2.exe
+./test/Test2.exe: .fix-multy1
+.PHONY: ./test/Test2.urp
+./test/Test2.urp: .fix-multy1
+.PHONY: ./test/Test2.urp.in
+./test/Test2.urp.in: .fix-multy1
+.PHONY: ./test/Test1.exe
+./test/Test1.exe: .fix-multy1
+.PHONY: ./test/Test1.urp
+./test/Test1.urp: .fix-multy1
+.PHONY: ./test/Test1.urp.in
+./test/Test1.urp.in: .fix-multy1
 .PHONY: ./lib.urp
 ./lib.urp: .fix-multy1
 .PHONY: ./lib.urp.in
 ./lib.urp.in: .fix-multy1
-.PHONY: ./Callback.o
-./Callback.o: .fix-multy1
-.PHONY: ./Test.sql
-./Test.sql: .fix-multy1
-.PHONY: ./Test2.sql
-./Test2.sql: .fix-multy1
+.PHONY: ./CallbackFFI.o
+./CallbackFFI.o: .fix-multy1
+.PHONY: ./test/Test1.sql
+./test/Test1.sql: .fix-multy1
+.PHONY: ./test/Test2.sql
+./test/Test2.sql: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3

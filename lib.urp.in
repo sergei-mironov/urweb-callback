@@ -1,5 +1,5 @@
-ffi ./Callback
-include ./Callback.h
-link ./Callback.o
+ffi ./CallbackFFI
+include ./CallbackFFI.h
+link ./CallbackFFI.o
 link -lstdc++
 

@@ -1,17 +1,18 @@
 
-type job
-type jobref = Basis.int
+con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdin = string, Stdout = string]
 
-val create : string -> string -> int -> int -> transaction job
-val run: job -> url -> transaction unit
-val cleanup: job -> transaction unit
+functor Make(S :
+sig
+  type t
+  val f : record jobrec -> transaction t
+end) :
 
-val tryDeref : jobref -> transaction (option job)
-val deref : jobref -> transaction job
-val ref : job -> jobref
+sig
 
-val pid : job -> int
-val exitcode : job -> int
-val stdout : job -> string
-val cmd : job -> string
-val errors : job -> string
+  type jobref = CallbackFFI.jobref
+
+  val create : string -> string -> transaction jobref
+
+  val monitor : jobref -> S.t -> transaction (Cb.aval S.t)
+
+end

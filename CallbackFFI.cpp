@@ -11,7 +11,7 @@ extern "C" {
 
 #include <urweb_cpp.h>
 #include <srvthread.h>
-#include "Callback.h"
+#include "CallbackFFI.h"
 }
 
 #include <map>
@@ -19,6 +19,7 @@ extern "C" {
 #include <memory>
 #include <sstream>
 #include <vector>
+#include <thread>
 
 #define dprintf printf
 
@@ -55,13 +56,10 @@ struct job {
   job(jkey _key, const string &_cmd, const blob &_buf_write, int _bufsize) :
 		key(_key), cmd(_cmd), buf_write(_buf_write) {
     buf_read.resize(_bufsize);
-    //fprintf(stderr, "Hello job #%d\n", key);
-    //raise(SIGINT);
   }
 
   ~job() {
     fprintf(stderr, "Bye-bye job #%d\n", key);
-    //raise(SIGINT);
   }
 
   jkey key;
@@ -216,7 +214,7 @@ static void execute(jptr r)
         }
 
         if(ret > 0) {
-          fprintf(stderr, "Callback BUG: select() reports unhandled state\n");
+          fprintf(stderr, "CallbackFFI BUG: select() reports unhandled state\n");
         }
         else {
           fprintf(stderr, "select() timeout\n");
@@ -255,21 +253,18 @@ struct joblock {
 
   jobmap& get() { return jm; }
   jobmap& operator& () { return jm; } 
-  int nextkey() { return keys++; };
 
 private:
-  static int keys;
   static jobmap jm;
   static pthread_mutex_t m;
 };
 
 pthread_mutex_t joblock::m = PTHREAD_MUTEX_INITIALIZER;
 jobmap          joblock::jm;
-int             joblock::keys = 0;
 
-jptr get(uw_Callback_job j) { return *((jptr*)j); }
+jptr get(uw_CallbackFFI_job j) { return *((jptr*)j); }
 
-uw_Callback_job uw_Callback_create(
+uw_CallbackFFI_job uw_CallbackFFI_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
   uw_Basis_string _stdin,
@@ -302,44 +297,79 @@ uw_Callback_job uw_Callback_create(
   return pp;
 }
 
-uw_Basis_unit uw_Callback_run(
+uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
-  uw_Callback_job _j,
+  uw_CallbackFFI_job _j,
   uw_Basis_string _u)
 {
-  struct pack { string u; jptr j; };
 
-  uw_register_transactional(ctx, new pack {_u, get(_j)},
+  uw_context* ctx2 = uw_init(-1, uw_get_loggers(ctx));
+  uw_set_app(ctx2, uw_get_app(ctx));
+  uw_set_headers(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
+  uw_set_env(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
+
+  struct pack { string u; jptr j; uw_context *ctx; };
+
+  uw_register_transactional(ctx, new pack {_u, get(_j), ctx2},
     [](void* data) {
-      st_create(
-        [](void* data) -> void* {
-          pack *p = (pack*)data;
-
+      std::thread t([](pack *p){
           try {
             execute(p->j);
-            st_loopback_enqueue(p->u.c_str());
           }
           catch(job::exception &e) {
-            fprintf(stderr,"Callback execute: %s\n", e.c_str());
+            fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
           }
-          delete (pack*)p;
-          return NULL;
-        }, data);
 
-      return;
+          uw_context *ctx =  p->ctx;
+          char *path = (char*)p->u.c_str(); // FIXME C-cast
+          uw_loggers *ls = uw_get_loggers(p->ctx);
+
+          int retries_left = 5;
+          failure_kind r;
+          do {
+            uw_reset(ctx);
+            uw_set_deadline(ctx, uw_time + uw_time_max);
+            r = uw_begin(ctx, path);
+            if (r == BOUNDED_RETRY)
+              --retries_left;
+            else if (r == UNLIMITED_RETRY)
+              ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
+            else if (r == BOUNDED_RETRY)
+              ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s\n", uw_error_message(ctx));
+            else if (r == FATAL)
+              ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
+            if (r == FATAL || r == BOUNDED_RETRY || r == UNLIMITED_RETRY)
+              if (uw_rollback(ctx, 0)) {
+                ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback\n");
+                break;
+              }
+          } while (r == UNLIMITED_RETRY || (r == BOUNDED_RETRY && retries_left > 0));
+
+          if (r != FATAL && r != BOUNDED_RETRY)
+            uw_commit(ctx);
+
+          uw_free(p->ctx);
+          delete p;
+        }, (pack*)data);
+
+      t.detach();
     },
+
     [](void *p) {
       delete (pack*)p;
     },
-    NULL );
+
+    [](void *p, int x) {
+      printf("handler3\n");
+    });
 
   return 0;
 }
 
-uw_Basis_unit uw_Callback_cleanup(struct uw_context *ctx, uw_Callback_job j)
+uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   uw_register_transactional(ctx, j,
-    [](uw_Callback_job j) {
+    [](uw_CallbackFFI_job j) {
       joblock l;
       jobmap &js(l.get());
 
@@ -351,9 +381,9 @@ uw_Basis_unit uw_Callback_cleanup(struct uw_context *ctx, uw_Callback_job j)
   return 0;
 }
 
-uw_Callback_job* uw_Callback_tryDeref(struct uw_context *ctx, uw_Callback_jobref k)
+uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackFFI_jobref k)
 {
-  uw_Callback_job pp = NULL;
+  uw_CallbackFFI_job pp = NULL;
 
   {
     joblock l;
@@ -367,7 +397,7 @@ uw_Callback_job* uw_Callback_tryDeref(struct uw_context *ctx, uw_Callback_jobref
   }
 
   if(pp) {
-    uw_Callback_job* pp2 = (uw_Callback_job*)uw_malloc(ctx, sizeof(uw_Callback_job*));
+    uw_CallbackFFI_job* pp2 = (uw_CallbackFFI_job*)uw_malloc(ctx, sizeof(uw_CallbackFFI_job*));
     uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {delete ((jptr*)pp);});
     *pp2 = pp;
     return pp2;
@@ -376,9 +406,9 @@ uw_Callback_job* uw_Callback_tryDeref(struct uw_context *ctx, uw_Callback_jobref
   return NULL;
 }
 
-uw_Callback_job uw_Callback_deref(struct uw_context *ctx, uw_Callback_jobref k)
+uw_CallbackFFI_job uw_CallbackFFI_deref(struct uw_context *ctx, uw_CallbackFFI_jobref k)
 {
-  uw_Callback_job* pp = uw_Callback_tryDeref(ctx, k);
+  uw_CallbackFFI_job* pp = uw_CallbackFFI_tryDeref(ctx, k);
 
   if(!pp)
     uw_error(ctx, FATAL, "No such job #%d", k);
@@ -386,22 +416,22 @@ uw_Callback_job uw_Callback_deref(struct uw_context *ctx, uw_Callback_jobref k)
   return *pp;
 }
 
-uw_Basis_int uw_Callback_exitcode(struct uw_context *ctx, uw_Callback_job j)
+uw_Basis_int uw_CallbackFFI_exitcode(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   return get(j)->exitcode;
 }
 
-uw_Basis_int uw_Callback_pid(struct uw_context *ctx, uw_Callback_job j)
+uw_Basis_int uw_CallbackFFI_pid(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   return get(j)->pid;
 }
 
-uw_Callback_jobref uw_Callback_ref(struct uw_context *ctx, uw_Callback_job j)
+uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   return get(j)->key;
 }
 
-uw_Basis_string uw_Callback_stdout(struct uw_context *ctx, uw_Callback_job j)
+uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   size_t sz = get(j)->total_read;
   char* str = (char*)uw_malloc(ctx, sz + 1);
@@ -410,7 +440,7 @@ uw_Basis_string uw_Callback_stdout(struct uw_context *ctx, uw_Callback_job j)
   return str;
 }
 
-uw_Basis_string uw_Callback_command(struct uw_context *ctx, uw_Callback_job j)
+uw_Basis_string uw_CallbackFFI_command(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   size_t sz = get(j)->cmd.length();
   char* str = (char*)uw_malloc(ctx, sz + 1);
@@ -419,7 +449,7 @@ uw_Basis_string uw_Callback_command(struct uw_context *ctx, uw_Callback_job j)
   return str;
 }
 
-uw_Basis_string uw_Callback_errors(struct uw_context *ctx, uw_Callback_job j)
+uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   // FIXME: not thread-safe!!
   size_t sz = get(j)->err.str().length();

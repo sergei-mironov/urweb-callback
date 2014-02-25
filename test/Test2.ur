@@ -1,7 +1,7 @@
 table t : { Id : int , Chan : channel string }
 
-val gj = Callback.deref
-val ref = Callback.ref
+val gj = CallbackFFI.deref
+val ref = CallbackFFI.ref
 
 sequence jobrefs
 
@@ -13,22 +13,22 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
-fun finished (jr:Callback.jobref) : transaction page =
-  debug "finished callback has been called";
-  j <- Callback.deref jr;
+fun finished (jr:CallbackFFI.jobref) : transaction page =
+  debug "finished CallbackFFI has been called";
+  j <- CallbackFFI.deref jr;
   s <- query1 (SELECT * FROM t WHERE t.Id = {[jr]}) (fn r s =>
     ch <- (return r.Chan);
-    send ch (Callback.stdout j);
+    send ch (CallbackFFI.stdout j);
     return (s+1)) 0;
   debug ("Stdout has been sent to a " ^ (show s) ^ " clients ");
   return <xml/>
 
-fun monitor (jr:Callback.jobref) =
-  j <- Callback.deref jr;
+fun monitor (jr:CallbackFFI.jobref) =
+  j <- CallbackFFI.deref jr;
   ch <- channel;
   dml(INSERT INTO t (Id,Chan) VALUES ({[ref j]},{[ch]}));
   f <- form {};
-  s <- source <xml> == {[Callback.stdout j]} == </xml>;
+  s <- source <xml> == {[CallbackFFI.stdout j]} == </xml>;
   let
     fun check {} = 
       stdout <- recv ch;
@@ -42,13 +42,13 @@ fun monitor (jr:Callback.jobref) =
         <body onload={check {}}>
           Job : {[jr]}
           <br/>
-          Pid : {[Callback.pid j]}
+          Pid : {[CallbackFFI.pid j]}
           <br/>
-          ExitCode : {[Callback.exitcode j]}
+          ExitCode : {[CallbackFFI.exitcode j]}
           <br/>
           <dyn signal={signal s}/>
           <br/>
-          (* Errors:  {[Callback.errors j]} *)
+          (* Errors:  {[CallbackFFI.errors j]} *)
           (* <hr/> *)
           {f}
           <br/>
@@ -65,8 +65,8 @@ and form {} : transaction xbody =
 
         fun start {} : transaction xbody =
           jr <- nextval jobrefs;
-          j <- Callback.create s.UName "" 100 jr;
-          Callback.run j (url (finished (ref j)));
+          j <- CallbackFFI.create s.UName "" 100 jr;
+          CallbackFFI.run j (url (finished (ref j)));
           redirect (url (monitor (ref j)))
 
         fun retry {} : transaction xbody = (
@@ -93,15 +93,15 @@ and form {} : transaction xbody =
     </xml>
   end
 
-and cleanup (jr:Callback.jobref) = template (
-  o <- Callback.tryDeref jr;
+and cleanup (jr:CallbackFFI.jobref) = template (
+  o <- CallbackFFI.tryDeref jr;
   case o of
     Some j =>
-      Callback.cleanup j;
+      CallbackFFI.cleanup j;
       f <- form {};
       return 
         <xml>
-          Job {[Callback.ref j]} is no more
+          Job {[CallbackFFI.ref j]} is no more
           <hr/>
           {f}
         </xml>

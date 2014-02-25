@@ -1,0 +1,19 @@
+allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js
+allow mime text/javascript
+allow mime text/css
+allow mime image/jpeg
+allow mime image/png
+allow mime image/gif
+database dbname=Test1
+safeGet Test1/main
+safeGet Test1/job_monitor
+safeGet Test1/job_start
+safeGet Test1/finished
+safeGet Test1/cleanup
+safeGet Test1/monitor
+sql .././test/Test1.sql
+library ../.
+debug
+
+$/list
+.././test/Test1
