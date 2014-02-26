@@ -1,0 +1,20 @@
+# HG changeset patch
+# User Sergey Mironov <grrwlf@gmail.com>
+# Date 1393233031 0
+#      Mon Feb 24 09:10:31 2014 +0000
+# Node ID 0b64990a384ef5816b55e80f04d787c7f3b1fd6d
+# Parent  7db8356caef57b0572d34bdd16629ef7a53ee848
+Add <pre> tag support
+
+diff --git a/lib/ur/basis.urs b/lib/ur/basis.urs
+--- a/lib/ur/basis.urs
++++ b/lib/ur/basis.urs
+@@ -865,6 +865,8 @@
+ 
+ val hr : bodyTag boxAttrs
+ 
++val pre : bodyTag boxAttrs
++
+ val a : bodyTag ([Link = transaction page, Href = url, Target = string, Rel = string] ++ boxAttrs)
+ 
+ val img : bodyTag ([Alt = string, Src = url, Width = int, Height = int,
