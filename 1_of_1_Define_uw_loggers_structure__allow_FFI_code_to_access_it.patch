@@ -1,0 +1,406 @@
+# HG changeset patch
+# User Sergey Mironov <grrwlf@gmail.com>
+# Date 1393402912 0
+#      Wed Feb 26 08:21:52 2014 +0000
+# Node ID a147ae7b4293171c7bd4b2877ef22fae552a138c
+# Parent  0b64990a384ef5816b55e80f04d787c7f3b1fd6d
+Define uw_loggers structure, allow FFI code to access it
+
+diff --git a/include/urweb/request.h b/include/urweb/request.h
+--- a/include/urweb/request.h
++++ b/include/urweb/request.h
+@@ -7,13 +7,13 @@
+ 
+ typedef struct uw_rc *uw_request_context;
+ 
+-void uw_request_init(uw_app *app, void *logger_data, uw_logger log_error, uw_logger log_debug);
++void uw_request_init(uw_app *app, uw_loggers* ls);
+ void uw_sign(const char *in, char *out);
+ 
+ uw_request_context uw_new_request_context(void);
+ void uw_free_request_context(uw_request_context);
+ 
+-request_result uw_request(uw_request_context, uw_context,
++request_result uw_request(uw_request_context rc, uw_context ctx,
+                           char *method, char *path, char *query_string,
+                           char *body, size_t body_len,
+                           void (*on_success)(uw_context), void (*on_failure)(uw_context),
+@@ -22,13 +22,12 @@
+                           int (*send)(int sockfd, const void *buf, ssize_t len),
+                           int (*close)(int fd));
+ 
+-uw_context uw_request_new_context(int id, uw_app*, void *logger_data, uw_logger log_error, uw_logger log_debug);
++uw_context uw_request_new_context(int id, uw_app *app, uw_loggers *ls);
+ 
+ typedef struct {
+   uw_app *app;
+-  void *logger_data;
+-  uw_logger log_error, log_debug;
+-} loggers;
++  uw_loggers *loggers;
++} pruner_data;
+ 
+ void *client_pruner(void *data);
+ 
+diff --git a/include/urweb/types_cpp.h b/include/urweb/types_cpp.h
+--- a/include/urweb/types_cpp.h
++++ b/include/urweb/types_cpp.h
+@@ -106,6 +106,12 @@
+   int is_html5;
+ } uw_app;
+ 
++typedef struct {
++  /* uw_app *app; */
++  void *logger_data;
++  uw_logger log_error, log_debug;
++} uw_loggers;
++
+ #define ERROR_BUF_LEN 1024
+ 
+ typedef struct {
+diff --git a/include/urweb/urweb_cpp.h b/include/urweb/urweb_cpp.h
+--- a/include/urweb/urweb_cpp.h
++++ b/include/urweb/urweb_cpp.h
+@@ -14,13 +14,13 @@
+ void uw_app_init(uw_app*);
+ 
+ void uw_client_connect(unsigned id, int pass, int sock,
+-                       int (*send)(int sockfd, const void *buf, size_t len),
++                       int (*send)(int sockfd, const void *buf, ssize_t len),
+                        int (*close)(int fd),
+                        void *logger_data, uw_logger log_error);
+ void uw_prune_clients(struct uw_context *);
+ failure_kind uw_initialize(struct uw_context *);
+ 
+-struct uw_context * uw_init(int id, void *logger_data, uw_logger log_debug);
++struct uw_context * uw_init(int id, uw_loggers *lg);
+ void uw_close(struct uw_context *);
+ int uw_set_app(struct uw_context *, uw_app*);
+ uw_app *uw_get_app(struct uw_context *);
+@@ -36,6 +36,8 @@
+ void uw_set_on_success(char *);
+ void uw_set_headers(struct uw_context *, char *(*get_header)(void *, const char *), void *get_header_data);
+ void uw_set_env(struct uw_context *, char *(*get_env)(void *, const char *), void *get_env_data);
++uw_loggers* uw_get_loggers(struct uw_context *ctx);
++uw_loggers* uw_get_loggers(struct uw_context *ctx);
+ failure_kind uw_begin(struct uw_context *, char *path);
+ void uw_ensure_transaction(struct uw_context *);
+ failure_kind uw_begin_onError(struct uw_context *, char *msg);
+diff --git a/src/c/cgi.c b/src/c/cgi.c
+--- a/src/c/cgi.c
++++ b/src/c/cgi.c
+@@ -60,8 +60,10 @@
+ static void log_debug(void *data, const char *fmt, ...) {
+ }
+ 
++static uw_loggers ls = {NULL, log_error, log_debug};
++
+ int main(int argc, char *argv[]) {
+-  uw_context ctx = uw_request_new_context(0, &uw_application, NULL, log_error, log_debug);
++  uw_context ctx = uw_request_new_context(0, &uw_application, &ls);
+   uw_request_context rc = uw_new_request_context();
+   request_result rr;
+   char *method = getenv("REQUEST_METHOD"),
+@@ -108,7 +110,7 @@
+   uw_set_on_success("");
+   uw_set_headers(ctx, get_header, NULL);
+   uw_set_env(ctx, get_env, NULL);
+-  uw_request_init(&uw_application, NULL, log_error, log_debug);
++  uw_request_init(&uw_application, &ls);
+ 
+   body[body_pos] = 0;
+   rr = uw_request(rc, ctx, method, path, query_string, body, body_pos,
+diff --git a/src/c/fastcgi.c b/src/c/fastcgi.c
+--- a/src/c/fastcgi.c
++++ b/src/c/fastcgi.c
+@@ -324,7 +324,8 @@
+ static void *worker(void *data) {
+   FCGI_Input *in = fastcgi_input();
+   FCGI_Output *out = fastcgi_output();
+-  uw_context ctx = uw_request_new_context(*(int *)data, &uw_application, out, log_error, log_debug);
++  uw_loggers ls = {out, log_error, log_debug};
++  uw_context ctx = uw_request_new_context(*(int *)data, &uw_application, &ls);
+   uw_request_context rc = uw_new_request_context();
+   headers hs;
+   size_t body_size = 0;
+@@ -514,7 +515,7 @@
+   exit(0);
+ }
+ 
+-static loggers ls = {&uw_application, NULL, log_error, log_debug};
++static uw_loggers ls = {NULL, log_error, log_debug};
+ 
+ int main(int argc, char *argv[]) {
+   // The skeleton for this function comes from Beej's sockets tutorial.
+@@ -563,7 +564,7 @@
+   }
+ 
+   uw_set_on_success("");
+-  uw_request_init(&uw_application, NULL, log_error, log_debug);
++  uw_request_init(&uw_application, &ls);
+ 
+   names = calloc(nthreads, sizeof(int));
+ 
+@@ -572,7 +573,11 @@
+   {
+     pthread_t thread;
+ 
+-    if (pthread_create_big(&thread, NULL, client_pruner, &ls)) {
++    pruner_data *pd = (pruner_data *)malloc(sizeof(pruner_data));
++    pd->app = &uw_application;
++    pd->loggers = &ls;
++
++    if (pthread_create_big(&thread, NULL, client_pruner, pd)) {
+       fprintf(stderr, "Error creating pruner thread\n");
+       return 1;
+     }
+diff --git a/src/c/http.c b/src/c/http.c
+--- a/src/c/http.c
++++ b/src/c/http.c
+@@ -70,9 +70,11 @@
+   }
+ }
+ 
++static uw_loggers ls = {NULL, log_error, log_debug};
++
+ static void *worker(void *data) {
+   int me = *(int *)data;
+-  uw_context ctx = uw_request_new_context(me, &uw_application, NULL, log_error, log_debug);
++  uw_context ctx = uw_request_new_context(me, &uw_application, &ls);
+   size_t buf_size = 1024;
+   char *buf = malloc(buf_size), *back = buf;
+   uw_request_context rc = uw_new_request_context();
+@@ -307,8 +309,6 @@
+   exit(0);
+ }
+ 
+-static loggers ls = {&uw_application, NULL, log_error, log_debug};
+-
+ int main(int argc, char *argv[]) {
+   // The skeleton for this function comes from Beej's sockets tutorial.
+   int sockfd;  // listen on sock_fd
+@@ -374,7 +374,7 @@
+     }
+   }
+ 
+-  uw_request_init(&uw_application, NULL, log_error, log_debug);
++  uw_request_init(&uw_application, &ls);
+ 
+   names = calloc(nthreads, sizeof(int));
+ 
+@@ -411,7 +411,11 @@
+   {
+     pthread_t thread;
+ 
+-    if (pthread_create_big(&thread, NULL, client_pruner, &ls)) {
++    pruner_data *pd = (pruner_data *)malloc(sizeof(pruner_data));
++    pd->app = &uw_application;
++    pd->loggers = &ls;
++
++    if (pthread_create_big(&thread, NULL, client_pruner, pd)) {
+       fprintf(stderr, "Error creating pruner thread\n");
+       return 1;
+     }
+diff --git a/src/c/request.c b/src/c/request.c
+--- a/src/c/request.c
++++ b/src/c/request.c
+@@ -12,6 +12,7 @@
+ #include <pthread.h>
+ 
+ #include "urweb.h"
++#include "request.h"
+ 
+ #define MAX_RETRIES 5
+ 
+@@ -32,8 +33,11 @@
+   return r;
+ }
+ 
+-uw_context uw_request_new_context(int id, uw_app *app, void *logger_data, uw_logger log_error, uw_logger log_debug) {
+-  uw_context ctx = uw_init(id, logger_data, log_debug);
++uw_context uw_request_new_context(int id, uw_app *app, uw_loggers *ls) {
++  void *logger_data = ls->logger_data;
++  uw_logger log_debug = ls->log_debug;
++  uw_logger log_error = ls->log_error;
++  uw_context ctx = uw_init(id, ls);
+   int retries_left = MAX_RETRIES;
+   uw_set_app(ctx, app);
+ 
+@@ -78,20 +82,15 @@
+ }
+ 
+ typedef struct {
++  int id;
++  uw_loggers *ls;
++  uw_periodic pdic;
+   uw_app *app;
+-  void *logger_data;
+-  uw_logger log_error, log_debug;
+-} loggers;
+-
+-typedef struct {
+-  int id;
+-  loggers *ls;
+-  uw_periodic pdic;
+ } periodic;
+ 
+ static void *periodic_loop(void *data) {
+   periodic *p = (periodic *)data;
+-  uw_context ctx = uw_request_new_context(p->id, p->ls->app, p->ls->logger_data, p->ls->log_error, p->ls->log_debug);
++  uw_context ctx = uw_request_new_context(p->id, p->app, p->ls);
+ 
+   if (!ctx)
+     exit(1);
+@@ -145,14 +144,17 @@
+   }
+ }
+ 
+-void uw_request_init(uw_app *app, void *logger_data, uw_logger log_error, uw_logger log_debug) {
++void uw_request_init(uw_app *app, uw_loggers* ls) {
+   uw_context ctx;
+   failure_kind fk;
+   uw_periodic *ps;
+-  loggers *ls = malloc(sizeof(loggers));
+   int id;
+   char *stackSize_s;
+ 
++  uw_logger log_debug = ls->log_debug;
++  uw_logger log_error = ls->log_error;
++  void* logger_data = ls->logger_data;
++
+   if ((stackSize_s = getenv("URWEB_STACK_SIZE")) != NULL && stackSize_s[0] != 0) {
+     stackSize = atoll(stackSize_s);
+ 
+@@ -162,11 +164,6 @@
+     }
+   }
+ 
+-  ls->app = app;
+-  ls->logger_data = logger_data;
+-  ls->log_error = log_error;
+-  ls->log_debug = log_debug;
+-
+   uw_global_init();
+   uw_app_init(app);
+ 
+@@ -179,7 +176,7 @@
+     }
+   }
+ 
+-  ctx = uw_request_new_context(0, app, logger_data, log_error, log_debug);
++  ctx = uw_request_new_context(0, app, ls);
+ 
+   if (!ctx)
+     exit(1);
+@@ -205,6 +202,7 @@
+     arg->id = id++;
+     arg->ls = ls;
+     arg->pdic = *ps;
++    arg->app = app;
+     
+     if (pthread_create_big(&thread, NULL, periodic_loop, arg)) {
+       fprintf(stderr, "Error creating periodic thread\n");
+@@ -240,7 +238,7 @@
+                           void (*on_success)(uw_context), void (*on_failure)(uw_context),
+                           void *logger_data, uw_logger log_error, uw_logger log_debug,
+                           int sock,
+-                          int (*send)(int sockfd, const void *buf, size_t len),
++                          int (*send)(int sockfd, const void *buf, ssize_t len),
+                           int (*close)(int fd)) {
+   int retries_left = MAX_RETRIES;
+   failure_kind fk;
+@@ -588,8 +586,8 @@
+ }
+ 
+ void *client_pruner(void *data) {
+-  loggers *ls = (loggers *)data;
+-  uw_context ctx = uw_request_new_context(0, ls->app, ls->logger_data, ls->log_error, ls->log_debug);
++  pruner_data *pd = (pruner_data *)data;
++  uw_context ctx = uw_request_new_context(0, pd->app, pd->loggers);
+ 
+   if (!ctx)
+     exit(1);
+diff --git a/src/c/static.c b/src/c/static.c
+--- a/src/c/static.c
++++ b/src/c/static.c
+@@ -7,13 +7,15 @@
+ 
+ extern uw_app uw_application;
+ 
+-static void log_debug(void *data, const char *fmt, ...) {
++static void log_(void *data, const char *fmt, ...) {
+   va_list ap;
+   va_start(ap, fmt);
+ 
+   vprintf(fmt, ap);
+ }
+ 
++static uw_loggers loggers = {NULL, log_, log_};
++
+ int main(int argc, char *argv[]) {
+   uw_context ctx;
+   failure_kind fk;
+@@ -23,7 +25,7 @@
+     return 1;
+   }
+  
+-  ctx = uw_init(0, NULL, log_debug);
++  ctx = uw_init(0, &loggers);
+   uw_set_app(ctx, &uw_application);
+   uw_initialize(ctx);
+ 
+diff --git a/src/c/urweb.c b/src/c/urweb.c
+--- a/src/c/urweb.c
++++ b/src/c/urweb.c
+@@ -460,8 +460,7 @@
+ 
+   void *client_data;
+ 
+-  void *logger_data;
+-  uw_logger log_debug;
++  uw_loggers *loggers;
+ 
+   int isPost, hasPostBody;
+   uw_Basis_postBody postBody;
+@@ -484,7 +483,7 @@
+ size_t uw_heap_max = SIZE_MAX;
+ size_t uw_script_max = SIZE_MAX;
+ 
+-uw_context uw_init(int id, void *logger_data, uw_logger log_debug) {
++uw_context uw_init(int id, uw_loggers *lg) {
+   uw_context ctx = malloc(sizeof(struct uw_context));
+ 
+   ctx->app = NULL;
+@@ -543,8 +542,7 @@
+ 
+   ctx->client_data = uw_init_client_data();
+ 
+-  ctx->logger_data = logger_data;
+-  ctx->log_debug = log_debug;
++  ctx->loggers = lg;
+ 
+   ctx->isPost = ctx->hasPostBody = 0;
+ 
+@@ -596,6 +594,11 @@
+   return ctx->db;
+ }
+ 
++
++uw_loggers* uw_get_loggers(struct uw_context *ctx) {
++  return ctx->loggers;
++}
++
+ void uw_free(uw_context ctx) {
+   size_t i;
+ 
+@@ -4103,8 +4106,8 @@
+ }
+ 
+ uw_Basis_unit uw_Basis_debug(uw_context ctx, uw_Basis_string s) {
+-  if (ctx->log_debug)
+-    ctx->log_debug(ctx->logger_data, "%s\n", s);
++  if (ctx->loggers->log_debug)
++    ctx->loggers->log_debug(ctx->loggers->logger_data, "%s\n", s);
+   else
+     fprintf(stderr, "%s\n", s);
+   return uw_unit_v;
