@@ -1,4 +1,10 @@
-con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdin = string, StdinB = option blob, Stdout = string]
+con jobrec = [
+  JobRef = int,
+  ExitCode = option int,
+  Cmd = string,
+  Stdin = string,
+  StdinB = option blob,
+  Stdout = string]
 
 datatype aval t = Ready of t | Future of (channel t) * (source t)
 
@@ -32,6 +38,8 @@ sig
   val deref : jobref -> transaction job
   val exitcode : job -> int
   val stdout : job -> string
+
+  val lastLineOfStdout : job -> string
 
 end =
 
@@ -90,6 +98,7 @@ struct
   val deref = CallbackFFI.deref
   val stdout = CallbackFFI.stdout
   val exitcode = CallbackFFI.exitcode
+  val lastLineOfStdout = CallbackFFI.lastLineOfStdout
 
 (*
   fun monitor (jr:jobref) (d:S.t) =

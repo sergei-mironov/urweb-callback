@@ -519,3 +519,49 @@ uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job
   return str;
 }
 
+uw_Basis_string uw_CallbackFFI_lastLineOfStdout(struct uw_context *ctx, uw_CallbackFFI_job j)
+{
+  blob *s = 0;
+
+  {
+    jlock _(get(j));
+    blob &o = get(j)->buf_read;
+
+    size_t end = o.size();
+    for(int i=end-1; i>=0; i--) {
+
+      if(o[i] == '\n' || i == 0) {
+        blob tail(&o[i+1], &o[end]);
+        if(tail.size() > 1) {
+          s = new blob(tail);
+          break;
+        }
+        else {
+          end = i;
+        }
+      }
+      if(o[i] == 0 ) {
+        end = i;
+      }
+    }
+  }
+
+  char *str;
+
+  if(s) {
+    uw_register_transactional(ctx, s, NULL, NULL, [](void* s, int) {delete ((blob*)s);});
+
+    blob &s2 = *s;
+
+    str = (char*) uw_malloc(ctx, s2.size() + 1);
+    memcpy(str, &s2[0], s2.size());
+    str[s2.size()] = 0;
+  }
+  else {
+    str = (char*) uw_malloc(ctx, 1);
+    str[1] = 0;
+  }
+
+  return str;
+}
+

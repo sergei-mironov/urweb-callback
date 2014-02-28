@@ -31,4 +31,6 @@ sig
   val exitcode : job -> int
   val stdout : job -> string
 
+  val lastLineOfStdout : job -> string
+
 end
