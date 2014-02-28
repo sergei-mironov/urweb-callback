@@ -16,6 +16,7 @@ project = do
 
   let tests = [ "test/Test1.urp"
               , "test/Test2.urp"
+              , "test/Test3.urp"
               ]
 
   ts <- forM tests $ \t -> do
@@ -33,6 +34,7 @@ project = do
       safeGet (t.="ur") "finished"
       safeGet (t.="ur") "cleanup"
       safeGet (t.="ur") "monitor"
+      safeGet (t.="ur") "C/callback"
       sql (t.="sql")
       library l
       debug

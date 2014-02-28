@@ -61,8 +61,8 @@ typedef std::mutex mutex;
 typedef long int jkey;
 
 struct job {
-  job(jkey _key, const string &_cmd, const blob &_buf_write, int _bufsize) :
-		key(_key), cmd(_cmd), buf_write(_buf_write) {
+  job(jkey _key, const string &_cmd, int _bufsize) :
+		  key(_key), cmd(_cmd) {
     buf_read.resize(_bufsize);
   }
 
@@ -85,7 +85,7 @@ struct job {
   size_t total_written = 0;
 
   // Data to write to job's stdin.
-  blob buf_write;
+  /* blob buf_write; */
 
   // Data to read from job's stdout. Needs mutex.
   blob buf_read;
@@ -125,7 +125,7 @@ private:
 /*{{{*/
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
-static void execute(jptr r)
+static void execute(jptr r, const blob& buf_write)
 {
   uw_System_pipe ur_to_cmd;
   uw_System_pipe cmd_to_ur;
@@ -186,7 +186,7 @@ static void execute(jptr r)
           MY_FD_SET_546( cmd_to_ur[0], &rfds );
         }
 
-        if (r->total_written < r->buf_write.size()){
+        if (r->total_written < buf_write.size()){
           MY_FD_SET_546( ur_to_cmd[1], &wfds );
         }
 
@@ -200,7 +200,7 @@ static void execute(jptr r)
           r->throw_c([=](oss& e) { e << "select failed" ; });
 
         if (ret == 0) {
-          fprintf(stderr, "select() timeout\n");
+          fprintf(stderr, "select() timeout!!\n");
         }
 
         if (FD_ISSET( cmd_to_ur[0], &rfds )) {
@@ -241,14 +241,14 @@ static void execute(jptr r)
         if (FD_ISSET( ur_to_cmd[1], &wfds )) {
           ret--;
 
-          size_t written = write(ur_to_cmd[1], &r->buf_write[r->total_written], r->buf_write.size() - r->total_written);
+          size_t written = write(ur_to_cmd[1], &buf_write[r->total_written], buf_write.size() - r->total_written);
 
           if(written < 0)
             r->throw_c([=](oss& e) { e << "write failed" ; });
 
           r->total_written += written;
 
-          if (r->total_written == r->buf_write.size()) {
+          if (r->total_written == buf_write.size()) {
             UW_SYSTEM_PIPE_CLOSE_IN(ur_to_cmd);
           }
         }
@@ -303,10 +303,9 @@ jobmap          joblock::jm;
 
 jptr get(uw_CallbackFFI_job j) { return *((jptr*)j); }
 
-uw_CallbackFFI_job uw_CallbackFFI_createB(
+uw_CallbackFFI_job uw_CallbackFFI_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
-  uw_Basis_blob _stdin,
   uw_Basis_int stdout_sz,
   uw_Basis_int jr)
 {
@@ -314,7 +313,6 @@ uw_CallbackFFI_job uw_CallbackFFI_createB(
   jobmap& js(l.get());
   jptr j(new job(jr,
                  cmd,
-                 blob(_stdin.data, _stdin.data + _stdin.size),
                  stdout_sz));
 
   js.insert(js.end(), jobmap::value_type(j->key, j));
@@ -336,24 +334,10 @@ uw_CallbackFFI_job uw_CallbackFFI_createB(
   return pp;
 }
 
-uw_CallbackFFI_job uw_CallbackFFI_create(
-  struct uw_context *ctx,
-  uw_Basis_string cmd,
-  uw_Basis_string _stdin,
-  uw_Basis_int stdout_sz,
-  uw_Basis_int jr)
-{
-  uw_Basis_blob b;
-  b.data = _stdin;
-  b.size = strlen(_stdin);
-
-  return uw_CallbackFFI_createB(ctx, cmd, b, stdout_sz, jr);
-}
-
-
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job _j,
+  uw_Basis_blob _stdin,
   uw_Basis_string _u)
 {
 
@@ -362,13 +346,14 @@ uw_Basis_unit uw_CallbackFFI_run(
   uw_set_headers(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
   uw_set_env(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
 
-  struct pack { string u; jptr j; uw_context *ctx; };
+  struct pack { string u; jptr j; blob b; uw_context *ctx; };
 
-  uw_register_transactional(ctx, new pack {_u, get(_j), ctx2},
+  uw_register_transactional(ctx,
+    new pack {_u, get(_j), blob(_stdin.data, _stdin.data + _stdin.size), ctx2},
     [](void* data) {
       std::thread t([](pack *p){
           try {
-            execute(p->j);
+            execute(p->j, p->b);
           }
           catch(job::exception &e) {
             fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
@@ -378,30 +363,61 @@ uw_Basis_unit uw_CallbackFFI_run(
           char *path = (char*)p->u.c_str(); // FIXME C-cast
           uw_loggers *ls = uw_get_loggers(p->ctx);
 
-          int retries_left = 5;
-          failure_kind r;
+          int retries_left;
+          failure_kind fk;
+
+          retries_left = 5;
+          while(1) {
+            fk = uw_begin_init(ctx);
+            if (fk == SUCCESS) {
+              ls->log_debug(ls->logger_data, "Database connection initialized.\n");
+              break;
+            } else if (fk == BOUNDED_RETRY) {
+              if (retries_left) {
+                ls->log_debug(ls->logger_data, "Initialization error triggers bounded retry: %s\n", uw_error_message(ctx));
+                --retries_left;
+              } else {
+                ls->log_error(ls->logger_data, "Fatal initialization error (out of retries): %s\n", uw_error_message(ctx));
+                goto out;
+              }
+            } else if (fk == UNLIMITED_RETRY)
+              ls->log_debug(ls->logger_data, "Initialization error triggers unlimited retry: %s\n", uw_error_message(ctx));
+            else if (fk == FATAL) {
+              ls->log_error(ls->logger_data, "Fatal initialization error: %s\n", uw_error_message(ctx));
+              goto out;
+            } else {
+              ls->log_error(ls->logger_data, "Unknown uw_begin_init return code!\n");
+              goto out;
+            }
+          }
+
+          retries_left = 5;
           do {
             uw_reset(ctx);
             uw_set_deadline(ctx, uw_time + uw_time_max);
-            r = uw_begin(ctx, path);
-            if (r == BOUNDED_RETRY)
-              --retries_left;
-            else if (r == UNLIMITED_RETRY)
+
+            fk = uw_begin(ctx, path);
+
+            if (fk == UNLIMITED_RETRY)
               ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
-            else if (r == BOUNDED_RETRY)
+            else if (fk == BOUNDED_RETRY) {
+              --retries_left;
               ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s\n", uw_error_message(ctx));
-            else if (r == FATAL)
+            }
+            else if (fk == FATAL)
               ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
-            if (r == FATAL || r == BOUNDED_RETRY || r == UNLIMITED_RETRY)
+
+            if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
               if (uw_rollback(ctx, 0)) {
                 ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback\n");
-                break;
+                goto out;
               }
-          } while (r == UNLIMITED_RETRY || (r == BOUNDED_RETRY && retries_left > 0));
+          } while (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0));
 
-          if (r != FATAL && r != BOUNDED_RETRY)
+          if (fk != FATAL && fk != BOUNDED_RETRY)
             uw_commit(ctx);
 
+        out:
           uw_free(p->ctx);
           delete p;
         }, (pack*)data);
@@ -451,8 +467,8 @@ uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackF
   }
 
   if(pp) {
-    uw_CallbackFFI_job* pp2 = (uw_CallbackFFI_job*)uw_malloc(ctx, sizeof(uw_CallbackFFI_job*));
     uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {delete ((jptr*)pp);});
+    uw_CallbackFFI_job* pp2 = (uw_CallbackFFI_job*)uw_malloc(ctx, sizeof(uw_CallbackFFI_job*));
     *pp2 = pp;
     return pp2;
   }
@@ -519,49 +535,28 @@ uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job
   return str;
 }
 
-uw_Basis_string uw_CallbackFFI_lastLineOfStdout(struct uw_context *ctx, uw_CallbackFFI_job j)
+uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string o)
 {
-  blob *s = 0;
+  int i;
+  size_t end = strlen(o);
+  for(i=end-1; i>=0; i--) {
 
-  {
-    jlock _(get(j));
-    blob &o = get(j)->buf_read;
-
-    size_t end = o.size();
-    for(int i=end-1; i>=0; i--) {
-
-      if(o[i] == '\n' || i == 0) {
-        blob tail(&o[i+1], &o[end]);
-        if(tail.size() > 1) {
-          s = new blob(tail);
-          break;
-        }
-        else {
-          end = i;
-        }
+    if(o[i] == '\n') {
+      if((end-(i+1)) > 1) {
+        break;
       }
-      if(o[i] == 0 ) {
+      else {
         end = i;
       }
     }
+    if(o[i] == 0 ) {
+      end = i;
+    }
   }
 
-  char *str;
-
-  if(s) {
-    uw_register_transactional(ctx, s, NULL, NULL, [](void* s, int) {delete ((blob*)s);});
-
-    blob &s2 = *s;
-
-    str = (char*) uw_malloc(ctx, s2.size() + 1);
-    memcpy(str, &s2[0], s2.size());
-    str[s2.size()] = 0;
-  }
-  else {
-    str = (char*) uw_malloc(ctx, 1);
-    str[1] = 0;
-  }
-
+  char* str = (char*) uw_malloc(ctx, end-i+1);
+  memcpy(str, &o[i], end-i);
+  str[end-i] = 0;
   return str;
 }
 

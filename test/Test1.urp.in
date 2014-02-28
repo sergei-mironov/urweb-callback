@@ -11,6 +11,7 @@ safeGet Test1/job_start
 safeGet Test1/finished
 safeGet Test1/cleanup
 safeGet Test1/monitor
+safeGet Test1/C/callback
 sql .././test/Test1.sql
 library ../.
 debug

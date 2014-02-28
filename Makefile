@@ -12,7 +12,12 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql
+all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql
+./test/Test3.db: ./test/Test3.exe ./test/Test3.sql
+	dropdb --if-exists Test3
+	createdb Test3
+	psql -f ./test/Test3.sql Test3
+	touch ./test/Test3.db
 ./test/Test2.db: ./test/Test2.exe ./test/Test2.sql
 	dropdb --if-exists Test2
 	createdb Test2
@@ -23,6 +28,11 @@ all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Te
 	createdb Test1
 	psql -f ./test/Test1.sql Test1
 	touch ./test/Test1.db
+./test/Test3.exe: .fix-multy3
+./test/Test3.urp: ./test/Test3.urp.in
+	cat ./test/Test3.urp.in > ./test/Test3.urp
+./test/Test3.urp.in: ./lib.urp ./test/Test3.ur ./test/Test3.urs
+	touch ./test/Test3.urp.in
 ./test/Test2.exe: .fix-multy2
 ./test/Test2.urp: ./test/Test2.urp.in
 	cat ./test/Test2.urp.in > ./test/Test2.urp
@@ -37,16 +47,20 @@ all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Te
 	cat ./lib.urp.in > ./lib.urp
 ./lib.urp.in: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o
 	touch ./lib.urp.in
-./CallbackFFI.o: ./CallbackFFI.cpp $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
-	$(URCPP) -c $(URINCL) -std=c++11 $(UR_CFLAGS) -o ./CallbackFFI.o ./CallbackFFI.cpp
+./CallbackFFI.o: ./CallbackFFI.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
+	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./test/Test1.sql: .fix-multy1
 ./test/Test2.sql: .fix-multy2
+./test/Test3.sql: .fix-multy3
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: ./test/Test1.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test1
 .INTERMEDIATE: .fix-multy2
 .fix-multy2: ./test/Test2.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test2
+.INTERMEDIATE: .fix-multy3
+.fix-multy3: ./test/Test3.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test3
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -55,9 +69,6 @@ $(call GUARD,URINCL):
 	touch $@
 $(call GUARD,URVERSION):
 	rm -f .cake3/GUARD_URVERSION_*
-	touch $@
-$(call GUARD,UR_CFLAGS):
-	rm -f .cake3/GUARD_UR_CFLAGS_*
 	touch $@
 
 else
@@ -68,10 +79,18 @@ export MAIN=1
 
 .PHONY: all
 all: .fix-multy1
+.PHONY: ./test/Test3.db
+./test/Test3.db: .fix-multy1
 .PHONY: ./test/Test2.db
 ./test/Test2.db: .fix-multy1
 .PHONY: ./test/Test1.db
 ./test/Test1.db: .fix-multy1
+.PHONY: ./test/Test3.exe
+./test/Test3.exe: .fix-multy1
+.PHONY: ./test/Test3.urp
+./test/Test3.urp: .fix-multy1
+.PHONY: ./test/Test3.urp.in
+./test/Test3.urp.in: .fix-multy1
 .PHONY: ./test/Test2.exe
 ./test/Test2.exe: .fix-multy1
 .PHONY: ./test/Test2.urp
@@ -94,6 +113,8 @@ all: .fix-multy1
 ./test/Test1.sql: .fix-multy1
 .PHONY: ./test/Test2.sql
 ./test/Test2.sql: .fix-multy1
+.PHONY: ./test/Test3.sql
+./test/Test3.sql: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3

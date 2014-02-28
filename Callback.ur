@@ -2,8 +2,6 @@ con jobrec = [
   JobRef = int,
   ExitCode = option int,
   Cmd = string,
-  Stdin = string,
-  StdinB = option blob,
   Stdout = string]
 
 datatype aval t = Ready of t | Future of (channel t) * (source t)
@@ -33,13 +31,11 @@ sig
 
   val monitor : jobref -> S.t -> transaction (aval S.t)
 
-  type job = CallbackFFI.job
+  val exitcode : jobref -> transaction (option int)
 
-  val deref : jobref -> transaction job
-  val exitcode : job -> int
-  val stdout : job -> string
+  val stdout : jobref -> transaction string
 
-  val lastLineOfStdout : job -> string
+  val lastLineOfStdout : jobref -> transaction string
 
 end =
 
@@ -68,19 +64,15 @@ struct
     CallbackFFI.cleanup j;
     return <xml/>
 
-  fun create (cmd:string) (inp:string) : transaction jobref =
-    jr <- nextval jobrefs;
-    j <- CallbackFFI.create cmd inp 256 jr;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdin,StdinB,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, {[inp]}, NULL, ""));
-    CallbackFFI.run j (url (callback jr));
-    return jr
-
   fun createB (cmd:string) (inp:blob) : transaction jobref =
     jr <- nextval jobrefs;
-    j <- CallbackFFI.createB cmd inp 256 jr;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdin,StdinB,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, "", {[Some inp]}, ""));
-    CallbackFFI.run j (url (callback jr));
+    j <- CallbackFFI.create cmd 1024 jr;
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, ""));
+    CallbackFFI.run j inp (url (callback jr));
     return jr
+
+  fun create (cmd:string) (inp:string) : transaction jobref =
+    createB cmd (textBlob inp)
 
   fun monitor (jr:jobref) (d:S.t) =
     r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
@@ -94,28 +86,31 @@ struct
           t <- S.f r.Jobs;
           return (Ready t)
 
-  type job = CallbackFFI.job
-  val deref = CallbackFFI.deref
-  val stdout = CallbackFFI.stdout
-  val exitcode = CallbackFFI.exitcode
-  val lastLineOfStdout = CallbackFFI.lastLineOfStdout
+  fun exitcode jr =
+    mj <- CallbackFFI.tryDeref jr;
+    case mj of
+      | Some j =>
+          e <- return (CallbackFFI.exitcode j);
+          if e < 0 then
+            return None
+          else
+            return (Some e)
+      | None =>
+         r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
+         return r.Jobs.ExitCode
 
-(*
-  fun monitor (jr:jobref) (d:S.t) =
-    r <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
-    case r of
-        None => return (Ready d)
-      | Some r =>
-          case r.Jobs.ExitCode of
-              None =>
-                c <- channel;
-                s <- source d;
-                dml (INSERT INTO handles(JobRef,Channel) VALUES ({[jr]}, {[c]}));
-                return (Future (c,s))
-            | Some (ec:int) =>
-                t <- S.f r.Jobs;
-                return (Ready t)
-*)
+  fun stdout jr =
+    mj <- CallbackFFI.tryDeref jr;
+    case mj of
+      | Some j =>
+          return (CallbackFFI.stdout j)
+      | None =>
+          r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
+          return r.Jobs.Stdout
+
+  fun lastLineOfStdout jr =
+    s <- stdout jr;
+    return (CallbackFFI.lastLine s)
 
 end
 

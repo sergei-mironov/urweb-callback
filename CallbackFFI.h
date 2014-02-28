@@ -20,20 +20,13 @@ typedef int uw_CallbackFFI_jobref;
 uw_CallbackFFI_job uw_CallbackFFI_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
-  uw_Basis_string _stdin,
-  uw_Basis_int stdout_sz,
-  uw_Basis_int jobref);
-
-uw_CallbackFFI_job uw_CallbackFFI_createB(
-  struct uw_context *ctx,
-  uw_Basis_string cmd,
-  uw_Basis_blob _stdin,
   uw_Basis_int stdout_sz,
   uw_Basis_int jobref);
 
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job k,
+  uw_Basis_blob _stdin,
   uw_Basis_string _url);
 
 uw_CallbackFFI_job uw_CallbackFFI_deref(struct uw_context *ctx, uw_CallbackFFI_jobref jr);
@@ -47,7 +40,7 @@ uw_Basis_string uw_CallbackFFI_command(struct uw_context *ctx, uw_CallbackFFI_jo
 uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job j);
 
-uw_Basis_string uw_CallbackFFI_lastLineOfStdout(struct uw_context *ctx, uw_CallbackFFI_job j);
+uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string s);
 
 #ifdef __cplusplus
 } // extern "C"
