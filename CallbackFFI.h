@@ -24,6 +24,13 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   uw_Basis_int stdout_sz,
   uw_Basis_int jobref);
 
+uw_CallbackFFI_job uw_CallbackFFI_createB(
+  struct uw_context *ctx,
+  uw_Basis_string cmd,
+  uw_Basis_blob _stdin,
+  uw_Basis_int stdout_sz,
+  uw_Basis_int jobref);
+
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job k,

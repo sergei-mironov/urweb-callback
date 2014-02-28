@@ -37,8 +37,8 @@ all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Te
 	cat ./lib.urp.in > ./lib.urp
 ./lib.urp.in: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o
 	touch ./lib.urp.in
-./CallbackFFI.o: ./CallbackFFI.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
-	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
+./CallbackFFI.o: ./CallbackFFI.cpp $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
+	$(URCPP) -c $(URINCL) -std=c++11 $(UR_CFLAGS) -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./test/Test1.sql: .fix-multy1
 ./test/Test2.sql: .fix-multy2
 .INTERMEDIATE: .fix-multy1
@@ -55,6 +55,9 @@ $(call GUARD,URINCL):
 	touch $@
 $(call GUARD,URVERSION):
 	rm -f .cake3/GUARD_URVERSION_*
+	touch $@
+$(call GUARD,UR_CFLAGS):
+	rm -f .cake3/GUARD_UR_CFLAGS_*
 	touch $@
 
 else

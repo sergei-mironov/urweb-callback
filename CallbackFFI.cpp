@@ -1,3 +1,7 @@
+/*
+ * Ur/Web FFI module providing callback mechanisms. The main rule: every uw_*
+ * function may longjump far-far away so we shouldn't mix it with C++ objects.
+ */
 
 extern "C" {
 #include <string.h>
@@ -20,6 +24,9 @@ extern "C" {
 #include <sstream>
 #include <vector>
 #include <thread>
+#include <algorithm>
+#include <mutex>
+
 
 #define dprintf printf
 
@@ -50,6 +57,7 @@ typedef int uw_System_pipe[4];
 typedef std::vector<unsigned char> blob;
 typedef std::string string;
 typedef std::ostringstream oss;
+typedef std::mutex mutex;
 typedef long int jkey;
 
 struct job {
@@ -64,18 +72,26 @@ struct job {
 
   jkey key;
 
+  string cmd;
+
   int pid = -1;
+
+  mutex m;
+
+  // Exit code. Needs mutex.
   int exitcode = -1;
 
   size_t total_read = 0;
   size_t total_written = 0;
 
-  blob buf_read;
+  // Data to write to job's stdin.
   blob buf_write;
 
-  oss err;
+  // Data to read from job's stdout. Needs mutex.
+  blob buf_read;
 
-  string cmd;
+  // Infrastructure errors (not stderr). Needs mutex.
+  oss err;
 
   typedef string exception;
 
@@ -93,12 +109,24 @@ struct job {
 
 typedef std::shared_ptr<job> jptr;
 
+struct jlock {
+  jlock(jptr j_)  : j(j_) {
+    j->m.lock();
+  }
+
+  ~jlock() {
+    j->m.unlock();
+  }
+
+private:
+  jptr j;
+};
+
 /*{{{*/
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
 static void execute(jptr r)
 {
-
   uw_System_pipe ur_to_cmd;
   uw_System_pipe cmd_to_ur;
 
@@ -171,11 +199,18 @@ static void execute(jptr r)
         if (ret < 0)
           r->throw_c([=](oss& e) { e << "select failed" ; });
 
+        if (ret == 0) {
+          fprintf(stderr, "select() timeout\n");
+        }
+
         if (FD_ISSET( cmd_to_ur[0], &rfds )) {
           ret--;
           size_t bytes_read;
 
           if(r->total_read < r->buf_read.size()) {
+            // FIXME: calling C read while holding a mutex. Looks safe, but
+            // still suspicious.
+            jlock _(r);
             bytes_read = read(cmd_to_ur[0], &r->buf_read[r->total_read], r->buf_read.size() - r->total_read);
 
             if(bytes_read < 0)
@@ -184,12 +219,17 @@ static void execute(jptr r)
             r->total_read += bytes_read;
           }
           else {
-            static blob devnull(1024);
+            blob devnull(r->buf_read.size() / 2);
 
             bytes_read = read(cmd_to_ur[0], &devnull[0], devnull.size());
 
             if(bytes_read < 0)
               r->throw_c([=](oss& e) { e << "read failed (devnull)" ; });
+            else {
+              jlock _(r);
+              memcpy(&r->buf_read[0], &r->buf_read[bytes_read], r->buf_read.size() - bytes_read);
+              memcpy(&r->buf_read[r->buf_read.size() - bytes_read], &devnull[0], bytes_read);
+            }
           }
 
           if (bytes_read == 0) {
@@ -216,9 +256,6 @@ static void execute(jptr r)
         if(ret > 0) {
           fprintf(stderr, "CallbackFFI BUG: select() reports unhandled state\n");
         }
-        else {
-          fprintf(stderr, "select() timeout\n");
-        }
 
       }
     }
@@ -228,6 +265,8 @@ static void execute(jptr r)
   if (r->pid != -1) {
     int status;
     int rc = waitpid(r->pid, &status, 0);
+
+    jlock _(r);
     if (rc == -1){
       r->err << "waitpid failed: pid " << r->pid << " errno " << errno;
     } else if (rc == r->pid) {
@@ -264,10 +303,10 @@ jobmap          joblock::jm;
 
 jptr get(uw_CallbackFFI_job j) { return *((jptr*)j); }
 
-uw_CallbackFFI_job uw_CallbackFFI_create(
+uw_CallbackFFI_job uw_CallbackFFI_createB(
   struct uw_context *ctx,
   uw_Basis_string cmd,
-  uw_Basis_string _stdin,
+  uw_Basis_blob _stdin,
   uw_Basis_int stdout_sz,
   uw_Basis_int jr)
 {
@@ -275,7 +314,7 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   jobmap& js(l.get());
   jptr j(new job(jr,
                  cmd,
-                 blob(_stdin, _stdin+strlen(_stdin)),
+                 blob(_stdin.data, _stdin.data + _stdin.size),
                  stdout_sz));
 
   js.insert(js.end(), jobmap::value_type(j->key, j));
@@ -296,6 +335,21 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
     });
   return pp;
 }
+
+uw_CallbackFFI_job uw_CallbackFFI_create(
+  struct uw_context *ctx,
+  uw_Basis_string cmd,
+  uw_Basis_string _stdin,
+  uw_Basis_int stdout_sz,
+  uw_Basis_int jr)
+{
+  uw_Basis_blob b;
+  b.data = _stdin;
+  b.size = strlen(_stdin);
+
+  return uw_CallbackFFI_createB(ctx, cmd, b, stdout_sz, jr);
+}
+
 
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
@@ -418,6 +472,7 @@ uw_CallbackFFI_job uw_CallbackFFI_deref(struct uw_context *ctx, uw_CallbackFFI_j
 
 uw_Basis_int uw_CallbackFFI_exitcode(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
+  jlock _(get(j));
   return get(j)->exitcode;
 }
 
@@ -435,8 +490,11 @@ uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job
 {
   size_t sz = get(j)->total_read;
   char* str = (char*)uw_malloc(ctx, sz + 1);
+
+  jlock _(get(j));
   memcpy(str, get(j)->buf_read.data(), sz);
   str[sz] = 0;
+
   return str;
 }
 
@@ -451,11 +509,13 @@ uw_Basis_string uw_CallbackFFI_command(struct uw_context *ctx, uw_CallbackFFI_jo
 
 uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
-  // FIXME: not thread-safe!!
   size_t sz = get(j)->err.str().length();
   char* str = (char*)uw_malloc(ctx, sz + 1);
+
+  jlock _(get(j));
   memcpy(str, get(j)->err.str().c_str(), sz);
   str[sz] = 0;
+
   return str;
 }
 

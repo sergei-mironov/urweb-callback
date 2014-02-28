@@ -1,4 +1,4 @@
-con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdin = string, Stdout = string]
+con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdin = string, StdinB = option blob, Stdout = string]
 
 datatype aval t = Ready of t | Future of (channel t) * (source t)
 
@@ -23,7 +23,15 @@ sig
 
   val create : string -> string -> transaction jobref
 
+  val createB : string -> blob -> transaction jobref
+
   val monitor : jobref -> S.t -> transaction (aval S.t)
+
+  type job = CallbackFFI.job
+
+  val deref : jobref -> transaction job
+  val exitcode : job -> int
+  val stdout : job -> string
 
 end =
 
@@ -54,16 +62,22 @@ struct
 
   fun create (cmd:string) (inp:string) : transaction jobref =
     jr <- nextval jobrefs;
-    j <- CallbackFFI.create cmd inp 1024 jr;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdin,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, {[inp]}, ""));
+    j <- CallbackFFI.create cmd inp 256 jr;
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdin,StdinB,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, {[inp]}, NULL, ""));
     CallbackFFI.run j (url (callback jr));
     return jr
 
-(*
+  fun createB (cmd:string) (inp:blob) : transaction jobref =
+    jr <- nextval jobrefs;
+    j <- CallbackFFI.createB cmd inp 256 jr;
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdin,StdinB,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, "", {[Some inp]}, ""));
+    CallbackFFI.run j (url (callback jr));
+    return jr
+
   fun monitor (jr:jobref) (d:S.t) =
     r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
     case r.Jobs.ExitCode of
-        None =>
+      | None =>
           c <- channel;
           s <- source d;
           dml (INSERT INTO handles(JobRef,Channel) VALUES ({[jr]}, {[c]}));
@@ -71,8 +85,13 @@ struct
       | Some (ec:int) =>
           t <- S.f r.Jobs;
           return (Ready t)
-*)
 
+  type job = CallbackFFI.job
+  val deref = CallbackFFI.deref
+  val stdout = CallbackFFI.stdout
+  val exitcode = CallbackFFI.exitcode
+
+(*
   fun monitor (jr:jobref) (d:S.t) =
     r <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
     case r of
@@ -87,6 +106,7 @@ struct
             | Some (ec:int) =>
                 t <- S.f r.Jobs;
                 return (Ready t)
+*)
 
 end
 
