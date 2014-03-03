@@ -12,55 +12,124 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql
-./test/Test3.db: ./test/Test3.exe ./test/Test3.sql
+all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql
+./test/Test3.db: ./Makefile ./test/Test3.exe ./test/Test3.sql
 	dropdb --if-exists Test3
 	createdb Test3
 	psql -f ./test/Test3.sql Test3
 	touch ./test/Test3.db
-./test/Test2.db: ./test/Test2.exe ./test/Test2.sql
+./test/Test2.db: ./Makefile ./test/Test2.exe ./test/Test2.sql
 	dropdb --if-exists Test2
 	createdb Test2
 	psql -f ./test/Test2.sql Test2
 	touch ./test/Test2.db
-./test/Test1.db: ./test/Test1.exe ./test/Test1.sql
+./test/Test1.db: ./Makefile ./test/Test1.exe ./test/Test1.sql
 	dropdb --if-exists Test1
 	createdb Test1
 	psql -f ./test/Test1.sql Test1
 	touch ./test/Test1.db
 ./test/Test3.exe: .fix-multy3
-./test/Test3.urp: ./test/Test3.urp.in
-	cat ./test/Test3.urp.in > ./test/Test3.urp
-./test/Test3.urp.in: ./lib.urp ./test/Test3.ur ./test/Test3.urs
-	touch ./test/Test3.urp.in
+./test/Test3.urp: ./Makefile ./lib.urp ./test/Test3.ur ./test/Test3.urs .cake3/tmp3
+	cat .cake3/tmp3 > ./test/Test3.urp
+.cake3/tmp3: ./Makefile
+	-rm -rf .cake3/tmp3
+	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp3
+	echo 'allow mime text/javascript' >> .cake3/tmp3
+	echo 'allow mime text/css' >> .cake3/tmp3
+	echo 'allow mime image/jpeg' >> .cake3/tmp3
+	echo 'allow mime image/png' >> .cake3/tmp3
+	echo 'allow mime image/gif' >> .cake3/tmp3
+	echo 'database dbname=Test3' >> .cake3/tmp3
+	echo 'safeGet Test3/main' >> .cake3/tmp3
+	echo 'safeGet Test3/job_monitor' >> .cake3/tmp3
+	echo 'safeGet Test3/job_start' >> .cake3/tmp3
+	echo 'safeGet Test3/finished' >> .cake3/tmp3
+	echo 'safeGet Test3/cleanup' >> .cake3/tmp3
+	echo 'safeGet Test3/monitor' >> .cake3/tmp3
+	echo 'safeGet Test3/C/callback' >> .cake3/tmp3
+	echo 'sql .././test/Test3.sql' >> .cake3/tmp3
+	echo 'library ../.' >> .cake3/tmp3
+	echo 'debug' >> .cake3/tmp3
+	echo '' >> .cake3/tmp3
+	echo '$$/list' >> .cake3/tmp3
+	echo '.././test/Test3' >> .cake3/tmp3
 ./test/Test2.exe: .fix-multy2
-./test/Test2.urp: ./test/Test2.urp.in
-	cat ./test/Test2.urp.in > ./test/Test2.urp
-./test/Test2.urp.in: ./lib.urp ./test/Test2.ur ./test/Test2.urs
-	touch ./test/Test2.urp.in
+./test/Test2.urp: ./Makefile ./lib.urp ./test/Test2.ur ./test/Test2.urs .cake3/tmp2
+	cat .cake3/tmp2 > ./test/Test2.urp
+.cake3/tmp2: ./Makefile
+	-rm -rf .cake3/tmp2
+	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp2
+	echo 'allow mime text/javascript' >> .cake3/tmp2
+	echo 'allow mime text/css' >> .cake3/tmp2
+	echo 'allow mime image/jpeg' >> .cake3/tmp2
+	echo 'allow mime image/png' >> .cake3/tmp2
+	echo 'allow mime image/gif' >> .cake3/tmp2
+	echo 'database dbname=Test2' >> .cake3/tmp2
+	echo 'safeGet Test2/main' >> .cake3/tmp2
+	echo 'safeGet Test2/job_monitor' >> .cake3/tmp2
+	echo 'safeGet Test2/job_start' >> .cake3/tmp2
+	echo 'safeGet Test2/finished' >> .cake3/tmp2
+	echo 'safeGet Test2/cleanup' >> .cake3/tmp2
+	echo 'safeGet Test2/monitor' >> .cake3/tmp2
+	echo 'safeGet Test2/C/callback' >> .cake3/tmp2
+	echo 'sql .././test/Test2.sql' >> .cake3/tmp2
+	echo 'library ../.' >> .cake3/tmp2
+	echo 'debug' >> .cake3/tmp2
+	echo '' >> .cake3/tmp2
+	echo '$$/list' >> .cake3/tmp2
+	echo '.././test/Test2' >> .cake3/tmp2
 ./test/Test1.exe: .fix-multy1
-./test/Test1.urp: ./test/Test1.urp.in
-	cat ./test/Test1.urp.in > ./test/Test1.urp
-./test/Test1.urp.in: ./lib.urp ./test/Test1.ur ./test/Test1.urs
-	touch ./test/Test1.urp.in
-./lib.urp: ./lib.urp.in
-	cat ./lib.urp.in > ./lib.urp
-./lib.urp.in: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o
-	touch ./lib.urp.in
-./CallbackFFI.o: ./CallbackFFI.cpp $(call GUARD,URCPP) $(call GUARD,URINCL)
+./test/Test1.urp: ./Makefile ./lib.urp ./test/Test1.ur ./test/Test1.urs .cake3/tmp1
+	cat .cake3/tmp1 > ./test/Test1.urp
+.cake3/tmp1: ./Makefile
+	-rm -rf .cake3/tmp1
+	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp1
+	echo 'allow mime text/javascript' >> .cake3/tmp1
+	echo 'allow mime text/css' >> .cake3/tmp1
+	echo 'allow mime image/jpeg' >> .cake3/tmp1
+	echo 'allow mime image/png' >> .cake3/tmp1
+	echo 'allow mime image/gif' >> .cake3/tmp1
+	echo 'database dbname=Test1' >> .cake3/tmp1
+	echo 'safeGet Test1/main' >> .cake3/tmp1
+	echo 'safeGet Test1/job_monitor' >> .cake3/tmp1
+	echo 'safeGet Test1/job_start' >> .cake3/tmp1
+	echo 'safeGet Test1/finished' >> .cake3/tmp1
+	echo 'safeGet Test1/cleanup' >> .cake3/tmp1
+	echo 'safeGet Test1/monitor' >> .cake3/tmp1
+	echo 'safeGet Test1/C/callback' >> .cake3/tmp1
+	echo 'sql .././test/Test1.sql' >> .cake3/tmp1
+	echo 'library ../.' >> .cake3/tmp1
+	echo 'debug' >> .cake3/tmp1
+	echo '' >> .cake3/tmp1
+	echo '$$/list' >> .cake3/tmp1
+	echo '.././test/Test1' >> .cake3/tmp1
+./lib.urp: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./Makefile .cake3/tmp0
+	cat .cake3/tmp0 > ./lib.urp
+.cake3/tmp0: ./Makefile
+	-rm -rf .cake3/tmp0
+	echo 'ffi ./CallbackFFI' >> .cake3/tmp0
+	echo 'include ./CallbackFFI.h' >> .cake3/tmp0
+	echo 'link ./CallbackFFI.o' >> .cake3/tmp0
+	echo 'link -lstdc++' >> .cake3/tmp0
+	echo '' >> .cake3/tmp0
+	echo './Callback' >> .cake3/tmp0
+./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,URCPP) $(call GUARD,URINCL)
 	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./test/Test1.sql: .fix-multy1
 ./test/Test2.sql: .fix-multy2
 ./test/Test3.sql: .fix-multy3
 .INTERMEDIATE: .fix-multy1
-.fix-multy1: ./test/Test1.urp $(call GUARD,URVERSION)
+.fix-multy1: ./Makefile ./test/Test1.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test1
 .INTERMEDIATE: .fix-multy2
-.fix-multy2: ./test/Test2.urp $(call GUARD,URVERSION)
+.fix-multy2: ./Makefile ./test/Test2.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test2
 .INTERMEDIATE: .fix-multy3
-.fix-multy3: ./test/Test3.urp $(call GUARD,URVERSION)
+.fix-multy3: ./Makefile ./test/Test3.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test3
+.PHONY: clean
+clean: 
+	rm ./CallbackFFI.o ./lib.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .fix-multy1 .fix-multy2 .fix-multy3
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -89,24 +158,24 @@ all: .fix-multy1
 ./test/Test3.exe: .fix-multy1
 .PHONY: ./test/Test3.urp
 ./test/Test3.urp: .fix-multy1
-.PHONY: ./test/Test3.urp.in
-./test/Test3.urp.in: .fix-multy1
+.PHONY: .cake3/tmp3
+.cake3/tmp3: .fix-multy1
 .PHONY: ./test/Test2.exe
 ./test/Test2.exe: .fix-multy1
 .PHONY: ./test/Test2.urp
 ./test/Test2.urp: .fix-multy1
-.PHONY: ./test/Test2.urp.in
-./test/Test2.urp.in: .fix-multy1
+.PHONY: .cake3/tmp2
+.cake3/tmp2: .fix-multy1
 .PHONY: ./test/Test1.exe
 ./test/Test1.exe: .fix-multy1
 .PHONY: ./test/Test1.urp
 ./test/Test1.urp: .fix-multy1
-.PHONY: ./test/Test1.urp.in
-./test/Test1.urp.in: .fix-multy1
+.PHONY: .cake3/tmp1
+.cake3/tmp1: .fix-multy1
 .PHONY: ./lib.urp
 ./lib.urp: .fix-multy1
-.PHONY: ./lib.urp.in
-./lib.urp.in: .fix-multy1
+.PHONY: .cake3/tmp0
+.cake3/tmp0: .fix-multy1
 .PHONY: ./CallbackFFI.o
 ./CallbackFFI.o: .fix-multy1
 .PHONY: ./test/Test1.sql
@@ -119,5 +188,7 @@ all: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3
 	$(MAKE) -f ./Makefile $(MAKECMDGOALS)
+.PHONY: clean
+clean: .fix-multy1
 
 endif
