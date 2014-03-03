@@ -514,7 +514,7 @@ uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job
   return str;
 }
 
-uw_Basis_string uw_CallbackFFI_command(struct uw_context *ctx, uw_CallbackFFI_job j)
+uw_Basis_string uw_CallbackFFI_cmd(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   size_t sz = get(j)->cmd.length();
   char* str = (char*)uw_malloc(ctx, sz + 1);
