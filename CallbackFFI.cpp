@@ -542,21 +542,23 @@ uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string 
   for(i=end-1; i>=0; i--) {
 
     if(o[i] == '\n') {
-      if((end-(i+1)) > 1) {
+      if((end-(i+1)) >= 1) {
         break;
       }
       else {
         end = i;
       }
     }
+
     if(o[i] == 0 ) {
       end = i;
     }
+
   }
 
-  char* str = (char*) uw_malloc(ctx, end-i+1);
-  memcpy(str, &o[i], end-i);
-  str[end-i] = 0;
+  char* str = (char*) uw_malloc(ctx, end-(i+1)+1);
+  memcpy(str, &o[(i+1)], end-(i+1));
+  str[end-(i+1)] = 0;
   return str;
 }
 

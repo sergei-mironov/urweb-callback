@@ -35,7 +35,7 @@ sig
 
   val stdout : jobref -> transaction string
 
-  val lastLineOfStdout : jobref -> transaction string
+  val lastLine : string -> string
 
   val get : jobref -> transaction (record jobrec)
 
@@ -114,9 +114,7 @@ struct
           r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
           return r.Jobs.Stdout
 
-  fun lastLineOfStdout jr =
-    s <- stdout jr;
-    return (CallbackFFI.lastLine s)
+  val lastLine = CallbackFFI.lastLine
 
   fun get jr =
     mj <- CallbackFFI.tryDeref jr;

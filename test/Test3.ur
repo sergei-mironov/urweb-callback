@@ -12,14 +12,13 @@ fun template (mb:transaction xbody) : transaction page =
     </xml>
 
 fun job_monitor (jr:C.jobref) : transaction page = template (
-  e <- C.exitcode jr;
-  o <- C.stdout jr;
+  j <- C.get jr;
   return <xml>
       Job : {[jr]}
       <br/>
-      ExitCode : {[e]}
+      ExitCode : {[j.ExitCode]}
       <br/>
-      Stdout:  {[o]}
+      Stdout:  {[j.Stdout]}
     </xml>)
 
 fun job_start {} : transaction page =

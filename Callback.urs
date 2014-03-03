@@ -28,9 +28,7 @@ sig
 
   val exitcode : jobref -> transaction (option int)
 
-  val stdout : jobref -> transaction string
-
-  val lastLineOfStdout : jobref -> transaction string
+  val lastLine : string -> string
 
   val get : jobref -> transaction (record jobrec)
 
