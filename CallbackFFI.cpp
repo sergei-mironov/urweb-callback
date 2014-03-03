@@ -560,3 +560,22 @@ uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string 
   return str;
 }
 
+uw_CallbackFFI_job uw_CallbackFFI_runNow(
+  struct uw_context *ctx,
+  uw_Basis_string cmd,
+  uw_Basis_int stdout_sz,
+  uw_Basis_blob _stdin,
+  uw_Basis_int jobref)
+{
+  uw_CallbackFFI_job j = uw_CallbackFFI_create(ctx, cmd, stdout_sz, jobref);
+
+  try {
+    execute(get(j), blob(_stdin.data, _stdin.data + _stdin.size));
+  }
+  catch(job::exception &e) {
+    fprintf(stderr,"CallbackFFI::runNow error: %s\n", e.c_str());
+  }
+
+  return j;
+}
+

@@ -42,6 +42,13 @@ uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job
 
 uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string s);
 
+uw_CallbackFFI_job uw_CallbackFFI_runNow(
+  struct uw_context *ctx,
+  uw_Basis_string cmd,
+  uw_Basis_int stdout_sz,
+  uw_Basis_blob _stdin,
+  uw_Basis_int jobref);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

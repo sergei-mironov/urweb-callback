@@ -12,7 +12,12 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql
+all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test4.db ./test/Test4.exe ./test/Test4.sql
+./test/Test4.db: ./Makefile ./test/Test4.exe ./test/Test4.sql
+	dropdb --if-exists Test4
+	createdb Test4
+	psql -f ./test/Test4.sql Test4
+	touch ./test/Test4.db
 ./test/Test3.db: ./Makefile ./test/Test3.exe ./test/Test3.sql
 	dropdb --if-exists Test3
 	createdb Test3
@@ -28,6 +33,31 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 	createdb Test1
 	psql -f ./test/Test1.sql Test1
 	touch ./test/Test1.db
+./test/Test4.exe: .fix-multy4
+./test/Test4.urp: ./Makefile ./lib.urp ./test/Test4.ur ./test/Test4.urs .cake3/tmp4
+	cat .cake3/tmp4 > ./test/Test4.urp
+.cake3/tmp4: ./Makefile
+	-rm -rf .cake3/tmp4
+	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp4
+	echo 'allow mime text/javascript' >> .cake3/tmp4
+	echo 'allow mime text/css' >> .cake3/tmp4
+	echo 'allow mime image/jpeg' >> .cake3/tmp4
+	echo 'allow mime image/png' >> .cake3/tmp4
+	echo 'allow mime image/gif' >> .cake3/tmp4
+	echo 'database dbname=Test4' >> .cake3/tmp4
+	echo 'safeGet Test4/main' >> .cake3/tmp4
+	echo 'safeGet Test4/job_monitor' >> .cake3/tmp4
+	echo 'safeGet Test4/job_start' >> .cake3/tmp4
+	echo 'safeGet Test4/finished' >> .cake3/tmp4
+	echo 'safeGet Test4/cleanup' >> .cake3/tmp4
+	echo 'safeGet Test4/monitor' >> .cake3/tmp4
+	echo 'safeGet Test4/C/callback' >> .cake3/tmp4
+	echo 'sql .././test/Test4.sql' >> .cake3/tmp4
+	echo 'library ../.' >> .cake3/tmp4
+	echo 'debug' >> .cake3/tmp4
+	echo '' >> .cake3/tmp4
+	echo '$$/list' >> .cake3/tmp4
+	echo '.././test/Test4' >> .cake3/tmp4
 ./test/Test3.exe: .fix-multy3
 ./test/Test3.urp: ./Makefile ./lib.urp ./test/Test3.ur ./test/Test3.urs .cake3/tmp3
 	cat .cake3/tmp3 > ./test/Test3.urp
@@ -113,11 +143,12 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 	echo 'link -lstdc++' >> .cake3/tmp0
 	echo '' >> .cake3/tmp0
 	echo './Callback' >> .cake3/tmp0
-./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,URCPP) $(call GUARD,URINCL)
-	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
+./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
+	$(URCPP) -c $(UR_CFLAGS) $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./test/Test1.sql: .fix-multy1
 ./test/Test2.sql: .fix-multy2
 ./test/Test3.sql: .fix-multy3
+./test/Test4.sql: .fix-multy4
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: ./Makefile ./test/Test1.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test1
@@ -127,9 +158,12 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 .INTERMEDIATE: .fix-multy3
 .fix-multy3: ./Makefile ./test/Test3.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test3
+.INTERMEDIATE: .fix-multy4
+.fix-multy4: ./Makefile ./test/Test4.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test4
 .PHONY: clean
 clean: 
-	rm ./CallbackFFI.o ./lib.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .fix-multy1 .fix-multy2 .fix-multy3
+	rm ./CallbackFFI.o ./lib.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .fix-multy1 .fix-multy2 .fix-multy3 .fix-multy4
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -138,6 +172,9 @@ $(call GUARD,URINCL):
 	touch $@
 $(call GUARD,URVERSION):
 	rm -f .cake3/GUARD_URVERSION_*
+	touch $@
+$(call GUARD,UR_CFLAGS):
+	rm -f .cake3/GUARD_UR_CFLAGS_*
 	touch $@
 
 else
@@ -148,12 +185,20 @@ export MAIN=1
 
 .PHONY: all
 all: .fix-multy1
+.PHONY: ./test/Test4.db
+./test/Test4.db: .fix-multy1
 .PHONY: ./test/Test3.db
 ./test/Test3.db: .fix-multy1
 .PHONY: ./test/Test2.db
 ./test/Test2.db: .fix-multy1
 .PHONY: ./test/Test1.db
 ./test/Test1.db: .fix-multy1
+.PHONY: ./test/Test4.exe
+./test/Test4.exe: .fix-multy1
+.PHONY: ./test/Test4.urp
+./test/Test4.urp: .fix-multy1
+.PHONY: .cake3/tmp4
+.cake3/tmp4: .fix-multy1
 .PHONY: ./test/Test3.exe
 ./test/Test3.exe: .fix-multy1
 .PHONY: ./test/Test3.urp
@@ -184,6 +229,8 @@ all: .fix-multy1
 ./test/Test2.sql: .fix-multy1
 .PHONY: ./test/Test3.sql
 ./test/Test3.sql: .fix-multy1
+.PHONY: ./test/Test4.sql
+./test/Test4.sql: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3

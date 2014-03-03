@@ -17,6 +17,7 @@ project = do
   let tests = [ "test/Test1.urp"
               , "test/Test2.urp"
               , "test/Test3.urp"
+              , "test/Test4.urp"
               ]
 
   ts <- forM tests $ \t -> do

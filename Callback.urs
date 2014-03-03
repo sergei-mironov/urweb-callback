@@ -32,4 +32,10 @@ sig
 
   val lastLineOfStdout : jobref -> transaction string
 
+  val get : jobref -> transaction (record jobrec)
+
+  val runNowB : string -> blob -> transaction (record jobrec)
+
+  val runNow : string -> string -> transaction (record jobrec)
+
 end

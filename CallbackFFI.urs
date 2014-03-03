@@ -18,3 +18,5 @@ val cmd : job -> string
 val errors : job -> string
 
 val lastLine : string -> string
+
+val runNow : string -> int -> blob -> jobref -> transaction job

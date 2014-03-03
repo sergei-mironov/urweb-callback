@@ -37,6 +37,12 @@ sig
 
   val lastLineOfStdout : jobref -> transaction string
 
+  val get : jobref -> transaction (record jobrec)
+
+  val runNowB : string -> blob -> transaction (record jobrec)
+
+  val runNow : string -> string -> transaction (record jobrec)
+
 end =
 
 struct
@@ -111,6 +117,39 @@ struct
   fun lastLineOfStdout jr =
     s <- stdout jr;
     return (CallbackFFI.lastLine s)
+
+  fun get jr =
+    mj <- CallbackFFI.tryDeref jr;
+    case mj of
+      |Some j =>
+        e <- (let val e = CallbackFFI.exitcode j in
+                if e < 0 then
+                  return None
+                else
+                  return (Some e)
+              end);
+        return {JobRef=jr, ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
+      |None =>
+        r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
+        return r.Jobs
+
+  fun runNowB cmd stdin =
+    jr <- nextval jobrefs;
+    j <- CallbackFFI.runNow cmd 1024 stdin jr;
+    e <- (let val e = CallbackFFI.exitcode j in
+            if e < 0 then
+              return None
+            else
+              return (Some e)
+          end);
+    so <- return (CallbackFFI.stdout j);
+    (* Don't waste the diskspace by inserting anything into the databse
+      dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[e]}, {[cmd]}, {[so]})); *)
+    CallbackFFI.cleanup j;
+    return {JobRef=jr, ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
+    
+  fun runNow cmd stdin =
+    runNowB cmd (textBlob stdin)
 
 end
 
