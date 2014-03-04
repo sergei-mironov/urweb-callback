@@ -18,6 +18,7 @@ project = do
               , "test/Test2.urp"
               , "test/Test3.urp"
               , "test/Test4.urp"
+              , "test/Test5.urp"
               ]
 
   ts <- forM tests $ \t -> do
@@ -28,6 +29,7 @@ project = do
       allow mime "image/jpeg";
       allow mime "image/png";
       allow mime "image/gif";
+      allow env "USER";
       database ("dbname="++(takeBaseName t))
       safeGet (t.="ur") "main"
       safeGet (t.="ur") "job_monitor"
@@ -35,6 +37,7 @@ project = do
       safeGet (t.="ur") "finished"
       safeGet (t.="ur") "cleanup"
       safeGet (t.="ur") "monitor"
+      safeGet (t.="ur") "run"
       safeGet (t.="ur") "C/callback"
       sql (t.="sql")
       library l

@@ -1,6 +1,8 @@
 structure C = Callback.Make(
   struct
     val f = fn x => return (<xml>{[x.Stdout]}</xml> : xbody)
+    val depth = 1000
+    val stdout_sz = 1024
   end)
 
 fun template (mb:transaction xbody) : transaction page =
@@ -22,7 +24,7 @@ fun job_monitor (jr:C.jobref) : transaction page = template (
     </xml>)
 
 fun job_start {} : transaction page =
-  jr <- C.create "for i in `seq 1 1 5`; do echo -n $i; sleep 2 ; done" "";
+  jr <- C.create "for i in `seq 1 1 5`; do echo -n $i; sleep 2 ; done" (textBlob "");
   redirect (url (job_monitor jr))
 
 fun main {} : transaction page = template (
