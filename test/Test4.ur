@@ -6,11 +6,13 @@ structure C = Callback.Make(
   end)
 
 fun getA {} : transaction string =
-  j <- C.runNow ("echo a") (textBlob "");
+  jr <- C.nextjob {};
+  j <- C.runNow jr ("echo a") (textBlob "");
   return j.Stdout
 
 fun getB {} : transaction string =
-  j <- C.runNow ("echo b") (textBlob "");
+  jr <- C.nextjob {};
+  j <- C.runNow jr ("echo b") (textBlob "");
   return j.Stdout
 
 fun main {} : transaction page =

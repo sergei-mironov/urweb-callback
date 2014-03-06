@@ -5,10 +5,6 @@ val getXml : aval xbody -> xbody
 
 con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdout = string]
 
-type jobref = CallbackFFI.jobref
-
-sequence jobrefs
-
 table jobs : $jobrec
   PRIMARY KEY JobRef
 
@@ -31,13 +27,15 @@ sig
 
   type jobref = CallbackFFI.jobref
 
-  val create : string -> blob -> transaction jobref
+  val nextjob : unit -> transaction jobref
+
+  val create : jobref -> string -> blob -> transaction unit
 
   val monitor : jobref -> S.t -> transaction (aval S.t)
 
   val get : jobref -> transaction (record jobrec)
 
-  val runNow : string -> blob -> transaction (record jobrec)
+  val runNow : jobref -> string -> blob -> transaction (record jobrec)
 
   val lastLine : string -> string
 

@@ -16,8 +16,6 @@ fun getXml a =
         </xml>
 
 
-type jobref = CallbackFFI.jobref
-
 sequence jobrefs
 
 table jobs : $jobrec
@@ -38,7 +36,9 @@ sig
 
   type jobref = CallbackFFI.jobref
 
-  val create : string -> blob -> transaction jobref
+  val nextjob : unit -> transaction jobref
+
+  val create : jobref -> string -> blob -> transaction unit
 
   val monitor : jobref -> S.t -> transaction (aval S.t)
 
@@ -46,13 +46,15 @@ sig
 
   val get : jobref -> transaction (record jobrec)
 
-  val runNow : string -> blob -> transaction (record jobrec)
+  val runNow : jobref -> string -> blob -> transaction (record jobrec)
 
 end =
 
 struct
 
   type jobref = CallbackFFI.jobref
+
+  fun nextjob {} = nextval jobrefs
 
   table handles : {JobRef : int, Channel : channel S.t}
 
@@ -71,12 +73,11 @@ struct
     CallbackFFI.cleanup j;
     return <xml/>
 
-  fun create (cmd:string) (inp:blob) : transaction jobref =
-    jr <- nextval jobrefs;
+  fun create (jr:jobref) (cmd:string) (inp:blob) : transaction unit =
     j <- CallbackFFI.create cmd S.stdout_sz jr;
     dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, ""));
     CallbackFFI.run j inp (Some (url (callback jr)));
-    return jr
+    return {}
 
   fun monitor (jr:jobref) (d:S.t) =
     r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
@@ -107,8 +108,7 @@ struct
         r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
         return r.Jobs
 
-  fun runNow cmd stdin =
-    jr <- nextval jobrefs;
+  fun runNow jr cmd stdin =
     j <- CallbackFFI.runNow cmd S.stdout_sz stdin jr;
     e <- (let val e = CallbackFFI.exitcode j in
             if e < 0 then
