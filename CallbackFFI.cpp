@@ -36,8 +36,8 @@ typedef int uw_System_pipe[4];
 #define UR_SYSTEM_POLL_TIMOUT_MS 1000
 
 #define UW_SYSTEM_PIPE_INIT(x) { x[2] = 0; x[3]=0; }
-#define UW_SYSTEM_PIPE_CLOSE_IN(x)  { close(x[1]); x[3] = 0; }
-#define UW_SYSTEM_PIPE_CLOSE_OUT(x) { close(x[0]); x[2] = 0; }
+#define UW_SYSTEM_PIPE_CLOSE_IN(x)  { close(x[1]); x[1+2] = 0; }
+#define UW_SYSTEM_PIPE_CLOSE_OUT(x) { close(x[0]); x[0+2] = 0; }
 #define UW_SYSTEM_PIPE_CLOSE(x) do { \
     if (x[2]) { close(x[0]); x[2] = 0; } \
     if (x[3]) { close(x[1]); x[3] = 0; } \
@@ -67,6 +67,7 @@ struct job {
   }
 
   ~job() {
+    // FIXME: remove this
     fprintf(stderr, "Bye-bye job #%d\n", key);
   }
 
@@ -83,9 +84,6 @@ struct job {
 
   size_t total_read = 0;
   size_t total_written = 0;
-
-  // Data to write to job's stdin.
-  /* blob buf_write; */
 
   // Data to read from job's stdout. Needs mutex.
   blob buf_read;
@@ -125,17 +123,20 @@ private:
 /*{{{*/
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
-static void execute(jptr r, const blob& buf_write)
+static void execute(jptr r, const blob& buf_write, uw_loggers *ls)
 {
   uw_System_pipe ur_to_cmd;
   uw_System_pipe cmd_to_ur;
+  uw_System_pipe cmd_to_ur2;
 
   UW_SYSTEM_PIPE_INIT(ur_to_cmd);
   UW_SYSTEM_PIPE_INIT(cmd_to_ur);
+  UW_SYSTEM_PIPE_INIT(cmd_to_ur2);
 
   try {
     UW_SYSTEM_PIPE_CREATE(ur_to_cmd);
     UW_SYSTEM_PIPE_CREATE(cmd_to_ur);
+    UW_SYSTEM_PIPE_CREATE(cmd_to_ur2);
 
     int pid = fork(); // local var required? TODO
     if (pid == -1)
@@ -148,6 +149,7 @@ static void execute(jptr r, const blob& buf_write)
        * TODO: should be closing all fds ? but the ones being used? */
       close(ur_to_cmd[1]);
       close(cmd_to_ur[0]);
+      close(cmd_to_ur2[0]);
 
       /* assign stdin */
       close(0);
@@ -158,6 +160,11 @@ static void execute(jptr r, const blob& buf_write)
       close(1);
       dup(cmd_to_ur[1]);
       close(cmd_to_ur[1]);
+
+      /* assign stderr */
+      close(2);
+      dup(cmd_to_ur2[1]);
+      close(cmd_to_ur2[1]);
 
       /* run command using /bin/sh shell - is there a shorter way to do this? */
       char * argv[3];
@@ -172,6 +179,7 @@ static void execute(jptr r, const blob& buf_write)
 
       /* close pipe ends which are not used */
       UW_SYSTEM_PIPE_CLOSE_IN ( cmd_to_ur );
+      UW_SYSTEM_PIPE_CLOSE_IN ( cmd_to_ur2 );
       UW_SYSTEM_PIPE_CLOSE_OUT( ur_to_cmd );
 
       while (1){
@@ -186,6 +194,10 @@ static void execute(jptr r, const blob& buf_write)
           MY_FD_SET_546( cmd_to_ur[0], &rfds );
         }
 
+        if(cmd_to_ur2[2] != 0) {
+          MY_FD_SET_546( cmd_to_ur2[0], &rfds );
+        }
+
         if (r->total_written < buf_write.size()){
           MY_FD_SET_546( ur_to_cmd[1], &wfds );
         }
@@ -194,13 +206,21 @@ static void execute(jptr r, const blob& buf_write)
         tv.tv_sec  = UR_SYSTEM_POLL_TIMOUT_MS / 1000;
         tv.tv_usec = (UR_SYSTEM_POLL_TIMOUT_MS % 1000) * (1000000/1000);
 
-        int ret = select(max_fd +1, &rfds, &wfds, &efds, &tv);
+        int ret = select(max_fd+1, &rfds, &wfds, &efds, &tv);
 
         if (ret < 0)
           r->throw_c([=](oss& e) { e << "select failed" ; });
 
-        if (ret == 0) {
-          fprintf(stderr, "select() timeout!!\n");
+        if (FD_ISSET( cmd_to_ur2[0], &rfds )) {
+          ret--;
+          int bytes_read;
+          unsigned char buf[512+1];
+          
+          bytes_read = read(cmd_to_ur2[0], &buf[0], 512);
+          if(bytes_read > 0) {
+            buf[bytes_read] = 0;
+            ls->log_error(ls->logger_data,"%s", buf);
+          }
         }
 
         if (FD_ISSET( cmd_to_ur[0], &rfds )) {
@@ -254,9 +274,8 @@ static void execute(jptr r, const blob& buf_write)
         }
 
         if(ret > 0) {
-          fprintf(stderr, "CallbackFFI BUG: select() reports unhandled state\n");
+          ls->log_error(ls->logger_data, "CallbackFFI BUG: select() reports unhandled state\n");
         }
-
       }
     }
   }
@@ -352,77 +371,79 @@ uw_Basis_unit uw_CallbackFFI_run(
     new pack {mb_url?mb_url:"", get(_j), blob(_stdin.data, _stdin.data + _stdin.size), ctx2},
     [](void* data) {
       std::thread t([](pack *p){
-          try {
-            execute(p->j, p->b);
-          }
-          catch(job::exception &e) {
-            fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
-          }
 
-          if(p->u.size() > 0) {
-            uw_context *ctx =  p->ctx;
-            char *path = (char*)p->u.c_str(); // FIXME C-cast
-            uw_loggers *ls = uw_get_loggers(p->ctx);
+        uw_context *ctx = p->ctx;
+        uw_loggers *ls = uw_get_loggers(p->ctx);
 
-            int retries_left;
-            failure_kind fk;
+        try {
+          execute(p->j, p->b, ls);
+        }
+        catch(job::exception &e) {
+          fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
+        }
 
-            retries_left = 5;
-            while(1) {
-              fk = uw_begin_init(ctx);
-              if (fk == SUCCESS) {
-                ls->log_debug(ls->logger_data, "Database connection initialized.\n");
-                break;
-              } else if (fk == BOUNDED_RETRY) {
-                if (retries_left) {
-                  ls->log_debug(ls->logger_data, "Initialization error triggers bounded retry: %s\n", uw_error_message(ctx));
-                  --retries_left;
-                } else {
-                  ls->log_error(ls->logger_data, "Fatal initialization error (out of retries): %s\n", uw_error_message(ctx));
-                  goto out;
-                }
-              } else if (fk == UNLIMITED_RETRY)
-                ls->log_debug(ls->logger_data, "Initialization error triggers unlimited retry: %s\n", uw_error_message(ctx));
-              else if (fk == FATAL) {
-                ls->log_error(ls->logger_data, "Fatal initialization error: %s\n", uw_error_message(ctx));
-                goto out;
-              } else {
-                ls->log_error(ls->logger_data, "Unknown uw_begin_init return code!\n");
-                goto out;
-              }
-            }
+        if(p->u.size() > 0) {
+          char *path = (char*)p->u.c_str(); // FIXME C-cast
 
-            retries_left = 5;
-            do {
-              uw_reset(ctx);
-              uw_set_deadline(ctx, uw_time + uw_time_max);
+          int retries_left;
+          failure_kind fk;
 
-              fk = uw_begin(ctx, path);
-
-              if (fk == UNLIMITED_RETRY)
-                ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
-              else if (fk == BOUNDED_RETRY) {
+          retries_left = 5;
+          while(1) {
+            fk = uw_begin_init(ctx);
+            if (fk == SUCCESS) {
+              ls->log_debug(ls->logger_data, "Database connection initialized.\n");
+              break;
+            } else if (fk == BOUNDED_RETRY) {
+              if (retries_left) {
+                ls->log_debug(ls->logger_data, "Initialization error triggers bounded retry: %s\n", uw_error_message(ctx));
                 --retries_left;
-                ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s\n", uw_error_message(ctx));
+              } else {
+                ls->log_error(ls->logger_data, "Fatal initialization error (out of retries): %s\n", uw_error_message(ctx));
+                goto out;
               }
-              else if (fk == FATAL)
-                ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
-
-              if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
-                if (uw_rollback(ctx, 0)) {
-                  ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback\n");
-                  goto out;
-                }
-            } while (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0));
-
-            if (fk != FATAL && fk != BOUNDED_RETRY)
-              uw_commit(ctx);
+            } else if (fk == UNLIMITED_RETRY)
+              ls->log_debug(ls->logger_data, "Initialization error triggers unlimited retry: %s\n", uw_error_message(ctx));
+            else if (fk == FATAL) {
+              ls->log_error(ls->logger_data, "Fatal initialization error: %s\n", uw_error_message(ctx));
+              goto out;
+            } else {
+              ls->log_error(ls->logger_data, "Unknown uw_begin_init return code!\n");
+              goto out;
+            }
           }
 
-        out:
-          uw_free(p->ctx);
-          delete p;
-        }, (pack*)data);
+          retries_left = 5;
+          do {
+            uw_reset(ctx);
+            uw_set_deadline(ctx, uw_time + uw_time_max);
+
+            fk = uw_begin(ctx, path);
+
+            if (fk == UNLIMITED_RETRY)
+              ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
+            else if (fk == BOUNDED_RETRY) {
+              --retries_left;
+              ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s\n", uw_error_message(ctx));
+            }
+            else if (fk == FATAL)
+              ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
+
+            if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
+              if (uw_rollback(ctx, 0)) {
+                ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback\n");
+                goto out;
+              }
+          } while (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0));
+
+          if (fk != FATAL && fk != BOUNDED_RETRY)
+            uw_commit(ctx);
+        }
+
+      out:
+        uw_free(p->ctx);
+        delete p;
+      }, (pack*)data);
 
       t.detach();
     },
@@ -432,7 +453,6 @@ uw_Basis_unit uw_CallbackFFI_run(
     },
 
     [](void *p, int x) {
-      printf("handler3\n");
     });
 
   return 0;
@@ -574,7 +594,7 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
   uw_CallbackFFI_job j = uw_CallbackFFI_create(ctx, cmd, stdout_sz, jobref);
 
   try {
-    execute(get(j), blob(_stdin.data, _stdin.data + _stdin.size));
+    execute(get(j), blob(_stdin.data, _stdin.data + _stdin.size), uw_get_loggers(ctx));
   }
   catch(job::exception &e) {
     fprintf(stderr,"CallbackFFI::runNow error: %s\n", e.c_str());

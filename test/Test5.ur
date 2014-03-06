@@ -14,7 +14,7 @@ fun monitor (jr:CallbackFFI.jobref) : transaction page =
 
 fun run {} : transaction page =
   jr <- nextval jobrefs;
-  j <- CallbackFFI.create "for i in `seq 1 1 5`; do echo -n $i; sleep 2 ; done" 100 jr;
+  j <- CallbackFFI.create "for i in `seq 1 1 5`; do echo $i >&2; sleep 2 ; done" 100 jr;
   CallbackFFI.run j (textBlob "") None;
   redirect (url (monitor jr))
 
