@@ -1,9 +1,4 @@
-structure C = Callback.Make(
-  struct
-    val f = fn x => return (<xml>{[x.Stdout]}</xml> : xbody)
-    val depth = 1000
-    val stdout_sz = 1024
-  end)
+structure C = Callback.Default
 
 fun template (mb:transaction xbody) : transaction page =
   b <- mb;

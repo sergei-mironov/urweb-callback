@@ -49,7 +49,6 @@ all: ./Makefile.devel ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/T
 	echo 'allow mime image/jpeg' >> .cake3/tmp5
 	echo 'allow mime image/png' >> .cake3/tmp5
 	echo 'allow mime image/gif' >> .cake3/tmp5
-	echo 'allow env USER' >> .cake3/tmp5
 	echo 'database dbname=Test5' >> .cake3/tmp5
 	echo 'safeGet Test5/main' >> .cake3/tmp5
 	echo 'safeGet Test5/job_monitor' >> .cake3/tmp5
@@ -76,7 +75,6 @@ all: ./Makefile.devel ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/T
 	echo 'allow mime image/jpeg' >> .cake3/tmp4
 	echo 'allow mime image/png' >> .cake3/tmp4
 	echo 'allow mime image/gif' >> .cake3/tmp4
-	echo 'allow env USER' >> .cake3/tmp4
 	echo 'database dbname=Test4' >> .cake3/tmp4
 	echo 'safeGet Test4/main' >> .cake3/tmp4
 	echo 'safeGet Test4/job_monitor' >> .cake3/tmp4
@@ -103,7 +101,6 @@ all: ./Makefile.devel ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/T
 	echo 'allow mime image/jpeg' >> .cake3/tmp3
 	echo 'allow mime image/png' >> .cake3/tmp3
 	echo 'allow mime image/gif' >> .cake3/tmp3
-	echo 'allow env USER' >> .cake3/tmp3
 	echo 'database dbname=Test3' >> .cake3/tmp3
 	echo 'safeGet Test3/main' >> .cake3/tmp3
 	echo 'safeGet Test3/job_monitor' >> .cake3/tmp3
@@ -130,7 +127,6 @@ all: ./Makefile.devel ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/T
 	echo 'allow mime image/jpeg' >> .cake3/tmp2
 	echo 'allow mime image/png' >> .cake3/tmp2
 	echo 'allow mime image/gif' >> .cake3/tmp2
-	echo 'allow env USER' >> .cake3/tmp2
 	echo 'database dbname=Test2' >> .cake3/tmp2
 	echo 'safeGet Test2/main' >> .cake3/tmp2
 	echo 'safeGet Test2/job_monitor' >> .cake3/tmp2
@@ -157,7 +153,6 @@ all: ./Makefile.devel ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/T
 	echo 'allow mime image/jpeg' >> .cake3/tmp1
 	echo 'allow mime image/png' >> .cake3/tmp1
 	echo 'allow mime image/gif' >> .cake3/tmp1
-	echo 'allow env USER' >> .cake3/tmp1
 	echo 'database dbname=Test1' >> .cake3/tmp1
 	echo 'safeGet Test1/main' >> .cake3/tmp1
 	echo 'safeGet Test1/job_monitor' >> .cake3/tmp1
@@ -181,12 +176,13 @@ all: ./Makefile.devel ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/T
 	echo 'include ./CallbackFFI.h' >> .cake3/tmp0
 	echo 'link ./CallbackFFI.o' >> .cake3/tmp0
 	echo 'link -lstdc++' >> .cake3/tmp0
+	echo 'safeGet Callback/Default/callback' >> .cake3/tmp0
 	echo '' >> .cake3/tmp0
 	echo './Callback' >> .cake3/tmp0
 ./Cakegen: ./Cakefile.hs
 	cake3
-./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile.devel $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
-	$(URCPP) -c $(UR_CFLAGS) $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
+./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile.devel $(call GUARD,URCPP) $(call GUARD,URINCL)
+	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./Makefile.devel: ./Cakegen
 	./Cakegen
 ./test/Test1.sql: .fix-multy1
@@ -220,9 +216,6 @@ $(call GUARD,URINCL):
 	touch $@
 $(call GUARD,URVERSION):
 	rm -f .cake3/GUARD_URVERSION_*
-	touch $@
-$(call GUARD,UR_CFLAGS):
-	rm -f .cake3/GUARD_UR_CFLAGS_*
 	touch $@
 
 else

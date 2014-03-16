@@ -12,6 +12,7 @@ project = do
     ffi "CallbackFFI.urs"
     include "CallbackFFI.h"
     csrc' "CallbackFFI.cpp" "-std=c++11" "-lstdc++"
+    safeGet "Callback.ur" "Default/callback"
     ur (pair "Callback.ur")
 
   let tests = [ "test/Test1.urp"
@@ -29,7 +30,6 @@ project = do
       allow mime "image/jpeg";
       allow mime "image/png";
       allow mime "image/gif";
-      allow env "USER";
       database ("dbname="++(takeBaseName t))
       safeGet (t.="ur") "main"
       safeGet (t.="ur") "job_monitor"

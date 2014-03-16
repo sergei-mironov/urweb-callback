@@ -1,9 +1,4 @@
-structure C = Callback.Make(
-  struct
-    val f = fn x => return (<xml>{[x.Stdout]}</xml> : xbody)
-    val depth = 1000
-    val stdout_sz = 1024
-  end)
+structure C = Callback.Default
 
 fun getA {} : transaction string =
   jr <- C.nextjob {};
