@@ -20,3 +20,7 @@ val errors : job -> string
 val lastLine : string -> string
 
 val runNow : string -> int -> blob -> jobref -> transaction job
+
+(* re-run the handler *)
+val rerun : string -> transaction unit
+

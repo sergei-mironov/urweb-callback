@@ -46,15 +46,21 @@ struct
     ec <- (return (CallbackFFI.exitcode j));
     so <- (return (CallbackFFI.stdout j));
     dml(UPDATE jobs SET ExitCode = {[Some ec]}, Stdout = {[so]} WHERE JobRef = {[jr]});
-    ji <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
-    dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND ExitCode <> NULL);
-    CallbackFFI.cleanup j;
-    S.callback ji.Jobs;
-    return <xml/>
+    mji <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
+    case mji of
+      |None =>
+        CallbackFFI.rerun ("Force re-run for job " ^ (show jr));
+        return <xml/>
+      |Some ji =>
+        dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND ExitCode <> NULL);
+        CallbackFFI.cleanup j;
+        S.callback ji.Jobs;
+        return <xml/>
 
   fun create (jr:jobref) (cmd:string) (inp:blob) : transaction unit =
     j <- CallbackFFI.create cmd S.stdout_sz jr;
     dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, ""));
+    debug ("job create " ^ (show jr));
     CallbackFFI.run j inp (Some (url (callback jr)));
     return {}
 

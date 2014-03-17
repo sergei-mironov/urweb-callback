@@ -413,7 +413,7 @@ uw_Basis_unit uw_CallbackFFI_run(
             }
           }
 
-          retries_left = 5;
+          retries_left = 50;
           do {
             uw_reset(ctx);
             uw_set_deadline(ctx, uw_time + uw_time_max);
@@ -424,7 +424,8 @@ uw_Basis_unit uw_CallbackFFI_run(
               ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
             else if (fk == BOUNDED_RETRY) {
               --retries_left;
-              ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s\n", uw_error_message(ctx));
+              ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s (with delay)\n", uw_error_message(ctx));
+              sleep(1);
             }
             else if (fk == FATAL)
               ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
@@ -601,5 +602,11 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
   }
 
   return j;
+}
+
+uw_Basis_unit uw_CallbackFFI_rerun(struct uw_context *ctx, uw_Basis_string msg)
+{
+  uw_error(ctx, BOUNDED_RETRY, "CallbackFFI::retry: %s", msg);
+  return 0;
 }
 
