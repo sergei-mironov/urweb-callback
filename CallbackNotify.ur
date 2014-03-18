@@ -5,11 +5,11 @@ con jobrec = [
   Cmd = string,
   Stdout = string]
 
-datatype jobval t = Ready of t | Running of (channel t) * (source t)
+type job = record jobrec
 
-type jobresult = jobval (record jobrec)
+datatype jobstatus = Ready of job | Running of (channel job) * (source job)
 
-table handles : {JobRef : int, Channel : channel (record jobrec)}
+table handles : {JobRef : int, Channel : channel job}
 
 type jobref = CallbackFFI.jobref
 
@@ -17,7 +17,7 @@ structure C = Callback.Make (struct
   val gc_depth = 100
   val stdout_sz = 1024
 
-  val callback = fn (ji:(record jobrec)) => 
+  val callback = fn (ji:job) =>
     query1 (SELECT * FROM handles WHERE handles.JobRef = {[ji.JobRef]}) (fn r s =>
       send r.Channel ji;
       return s) {};
@@ -32,15 +32,24 @@ val create = C.create
 
 val jobs = Callback.jobs
 
-fun monitor (jr:jobref) = 
-  r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
-  case r.Jobs.ExitCode of
+fun monitor jr = 
+  r <- C.get jr;
+  case r.ExitCode of
     |None =>
       c <- channel;
-      s <- source (r.Jobs);
+      s <- source r;
       dml (INSERT INTO handles(JobRef,Channel) VALUES ({[jr]}, {[c]}));
       return (Running (c,s))
     |Some (ec:int) =>
-      return (Ready r.Jobs)
+      return (Ready r)
 
+fun monitorX jr render =
+  js <- monitor jr;
+  case js of
+    |Ready j => return (render j)
+    |Running (c,ss) =>
+      return <xml>
+        <dyn signal={v <- signal ss; return (render v)}/>
+        <active code={spawn (v <- recv c; set ss v); return <xml/>}/>
+        </xml>
 

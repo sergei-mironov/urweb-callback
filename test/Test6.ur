@@ -18,18 +18,8 @@ fun render (j:C.job) : xbody =
       Stdout:  {[j.Stdout]}
     </xml>
 
-fun toXml (jres:C.jobresult) : transaction xbody =
-  case jres of
-    |C.Ready job => return (render job)
-    |C.Running (c,ss) =>
-      return <xml>
-        <dyn signal={v <- signal ss; return (render v)}/>
-        <active code={spawn (v <- recv c; set ss v); return <xml/>}/>
-        </xml>
-
-fun job_monitor (jr:C.jobref) : transaction page = template (
-  j <- C.monitor jr;
-  toXml j)
+fun job_monitor (jr:C.jobref) : transaction page =
+  template (C.monitorX jr render)
 
 fun job_start {} : transaction page =
   jr <- C.nextjob {};
