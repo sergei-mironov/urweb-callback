@@ -49,7 +49,7 @@ struct
     mji <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
     case mji of
       |None =>
-        CallbackFFI.rerun ("Force re-run for job " ^ (show jr));
+        CallbackFFI.forceBoundedRetry ("Force bounded retry for job " ^ (show jr));
         return <xml/>
       |Some ji =>
         dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND ExitCode <> NULL);

@@ -604,7 +604,7 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
   return j;
 }
 
-uw_Basis_unit uw_CallbackFFI_rerun(struct uw_context *ctx, uw_Basis_string msg)
+uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_string msg)
 {
   uw_error(ctx, BOUNDED_RETRY, "CallbackFFI::retry: %s", msg);
   return 0;

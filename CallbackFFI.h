@@ -42,7 +42,7 @@ uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job
 
 uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string s);
 
-uw_Basis_unit uw_CallbackFFI_rerun(struct uw_context *ctx, uw_Basis_string msg);
+uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_string msg);
 
 uw_CallbackFFI_job uw_CallbackFFI_runNow(
   struct uw_context *ctx,
