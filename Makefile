@@ -179,8 +179,8 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 	echo 'safeGet Callback/Default/callback' >> .cake3/tmp0
 	echo '' >> .cake3/tmp0
 	echo './Callback' >> .cake3/tmp0
-./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,URCPP) $(call GUARD,URINCL)
-	$(URCPP) -c $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
+./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
+	$(URCPP) -c $(UR_CFLAGS) $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./test/Test1.sql: .fix-multy1
 ./test/Test2.sql: .fix-multy2
 ./test/Test3.sql: .fix-multy3
@@ -201,9 +201,6 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 .INTERMEDIATE: .fix-multy5
 .fix-multy5: ./Makefile ./test/Test5.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test5
-.PHONY: clean
-clean: 
-	rm ./CallbackFFI.o ./lib.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test5.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5 .fix-multy1 .fix-multy2 .fix-multy3 .fix-multy4 .fix-multy5
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -213,12 +210,17 @@ $(call GUARD,URINCL):
 $(call GUARD,URVERSION):
 	rm -f .cake3/GUARD_URVERSION_*
 	touch $@
+$(call GUARD,UR_CFLAGS):
+	rm -f .cake3/GUARD_UR_CFLAGS_*
+	touch $@
 
 else
 
 # Prebuild/postbuild section
 
 export MAIN=1
+
+ifneq ($(MAKECMDGOALS),clean)
 
 .PHONY: all
 all: .fix-multy1
@@ -282,7 +284,11 @@ all: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3
 	$(MAKE) -f ./Makefile $(MAKECMDGOALS)
+
+endif
 .PHONY: clean
-clean: .fix-multy1
+clean: 
+	-rm ./CallbackFFI.o ./lib.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test5.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5
+	-rm -rf .cake3
 
 endif
