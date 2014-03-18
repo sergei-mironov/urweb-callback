@@ -2,3 +2,9 @@
 .git/*
 .cake3/*
 Cakegen
+*.urp
+*.exe
+*.lib
+*.db
+*.sql
+*.o
