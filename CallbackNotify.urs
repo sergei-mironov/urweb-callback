@@ -1,33 +1,19 @@
+con jobrec = [
+  JobRef = int,
+  ExitCode = option int,
+  Cmd = string,
+  Stdout = string]
 
-functor Make(S :
-sig
+datatype jobval t = Ready of t | Running of (channel t) * (source t)
 
-  (* Representation of a job *)
-  type t
+type job = record jobrec
 
-  (* A convertor from jobrecord to the user-defined type t *)
-  val f : record jobrec -> transaction t
+type jobresult = jobval job
 
-  val depth : int
+type jobref = CallbackFFI.jobref
 
-  val stdout_sz : int
+val nextjob : unit -> transaction jobref
 
-end) :
+val create : jobref -> string -> blob -> transaction unit
 
-sig
-
-  type jobref = CallbackFFI.jobref
-
-  val nextjob : unit -> transaction jobref
-
-  val create : jobref -> string -> blob -> transaction unit
-
-  val monitor : jobref -> S.t -> transaction (aval S.t)
-
-  val get : jobref -> transaction (record jobrec)
-
-  val runNow : jobref -> string -> blob -> transaction (record jobrec)
-
-  val lastLine : string -> string
-
-end
+val monitor : jobref -> transaction jobresult

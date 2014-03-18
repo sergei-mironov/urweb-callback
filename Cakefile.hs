@@ -13,13 +13,16 @@ project = do
     include "CallbackFFI.h"
     csrc' "CallbackFFI.cpp" "-std=c++11" "-lstdc++"
     safeGet "Callback.ur" "Default/callback"
+    safeGet "CallbackNotify.ur" "C/callback"
     ur (pair "Callback.ur")
+    ur (pair "CallbackNotify.ur")
 
   let tests = [ "test/Test1.urp"
               , "test/Test2.urp"
               , "test/Test3.urp"
               , "test/Test4.urp"
               , "test/Test5.urp"
+              , "test/Test6.urp"
               ]
 
   ts <- forM tests $ \t -> do
