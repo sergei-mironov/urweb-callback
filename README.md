@@ -1,7 +1,7 @@
 Urweb-callback
 --------------
 
-Urweb-callback is a library for managing asyncronous processes directly from an
+Urweb-callback is a library for managing asynchronous processes directly from an
 [Ur/Web](http://www.impredicative.com/ur/) application.
 
 
@@ -82,7 +82,7 @@ The most important functions returned by Make are:
 `nextjob` issues unique job references, `create` accepts the following arguments:
 jobref, command line, stdin, then runs the process. `get` returns it's state.
 
-`runNow` creates the procees and runs it syncronously. This function blocks
+`runNow` creates the procees and runs it synchronously. This function blocks
 Ur/Web's handler thread. Use it at your own risk.
 
 ### CallbackNotify module
