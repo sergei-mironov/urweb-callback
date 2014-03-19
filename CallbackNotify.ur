@@ -32,6 +32,8 @@ val create = C.create
 
 val jobs = Callback.jobs
 
+val abortMore = C.abortMore
+
 fun monitor jr = 
   r <- C.get jr;
   case r.ExitCode of

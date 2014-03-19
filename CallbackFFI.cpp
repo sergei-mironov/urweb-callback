@@ -26,6 +26,7 @@ extern "C" {
 #include <thread>
 #include <algorithm>
 #include <mutex>
+#include <atomic>
 
 
 #define dprintf printf
@@ -58,17 +59,20 @@ typedef std::vector<unsigned char> blob;
 typedef std::string string;
 typedef std::ostringstream oss;
 typedef std::mutex mutex;
+typedef std::atomic<int> atomic;
 typedef long int jkey;
 
 struct job {
-  job(jkey _key, const string &_cmd, int _bufsize) :
-		  key(_key), cmd(_cmd) {
+  job(jkey _key, const string &_cmd, int _bufsize, atomic& counter_) :
+		  key(_key), cmd(_cmd), counter(counter_) {
     buf_read.resize(_bufsize);
+    counter++;
   }
 
   ~job() {
     // FIXME: remove this
     fprintf(stderr, "Bye-bye job #%d\n", key);
+    counter--;
   }
 
   jkey key;
@@ -103,6 +107,10 @@ struct job {
     f(err);
     throw err.str();
   }
+
+private:
+
+  atomic& counter;
 };
 
 typedef std::shared_ptr<job> jptr;
@@ -306,19 +314,22 @@ static void execute(jptr r, const blob& buf_write, uw_loggers *ls)
 typedef std::map<jkey,jptr> jobmap;
 
 struct joblock {
-  joblock() { pthread_mutex_lock(&m); }
-  ~joblock() { pthread_mutex_unlock(&m); }
+  joblock() { m.lock(); }
+  ~joblock() { m.unlock(); }
 
   jobmap& get() { return jm; }
   jobmap& operator& () { return jm; } 
 
+  static atomic cnt;
+
 private:
   static jobmap jm;
-  static pthread_mutex_t m;
+  static mutex m;
 };
 
-pthread_mutex_t joblock::m = PTHREAD_MUTEX_INITIALIZER;
-jobmap          joblock::jm;
+mutex joblock::m;
+jobmap joblock::jm;
+atomic joblock::cnt;
 
 jptr get(uw_CallbackFFI_job j) { return *((jptr*)j); }
 
@@ -332,7 +343,8 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   jobmap& js(l.get());
   jptr j(new job(jr,
                  cmd,
-                 stdout_sz));
+                 stdout_sz,
+                 l.cnt));
 
   js.insert(js.end(), jobmap::value_type(j->key, j));
 
@@ -608,5 +620,11 @@ uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_
 {
   uw_error(ctx, BOUNDED_RETRY, "CallbackFFI::retry: %s", msg);
   return 0;
+}
+
+uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx)
+{
+  joblock l;
+  return l.cnt;
 }
 

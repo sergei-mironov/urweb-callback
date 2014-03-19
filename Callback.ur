@@ -21,6 +21,8 @@ signature S = sig
   val runNow : jobref -> string -> blob -> transaction (record jobrec)
 
   val lastLine : string -> string
+
+  val abortMore : int -> transaction int
 end
 
 
@@ -95,6 +97,11 @@ struct
     CallbackFFI.cleanup j;
     return {JobRef=jr, ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
 
+  val abortMore limit =
+    n <- CallbackFFI.nactive;
+    case n > limit of
+      |False => return n
+      |True => error (<xml>Active jobs limit exceeded: active {[n]} limit {[limit]}</xml>)
 
 end
 

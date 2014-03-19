@@ -16,6 +16,12 @@ signature S = sig
   val runNow : jobref -> string -> blob -> transaction (record jobrec)
 
   val lastLine : string -> string
+
+  (*
+   * Aborts the handler if the number of jobs exceeds the limit.
+   * Returns the actual number of job objects in memory.
+   *)
+  val abortMore : int -> transaction int
 end
 
 functor Make(S :

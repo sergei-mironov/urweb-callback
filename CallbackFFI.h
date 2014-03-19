@@ -29,6 +29,8 @@ uw_Basis_unit uw_CallbackFFI_run(
   uw_Basis_blob _stdin,
   uw_Basis_string mb_url);
 
+uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx);
+
 uw_CallbackFFI_job uw_CallbackFFI_deref(struct uw_context *ctx, uw_CallbackFFI_jobref jr);
 uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackFFI_jobref jr);
 uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_job j);

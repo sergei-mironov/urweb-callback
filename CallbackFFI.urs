@@ -7,6 +7,8 @@ val create : string -> int -> jobref -> transaction job
 val run: job -> blob -> option url -> transaction unit
 val cleanup: job -> transaction unit
 
+val nactive : transaction int
+
 val tryDeref : jobref -> transaction (option job)
 val deref : jobref -> transaction job
 val ref : job -> jobref
@@ -16,6 +18,7 @@ val exitcode : job -> int
 val stdout : job -> string
 val cmd : job -> string
 val errors : job -> string
+
 
 val lastLine : string -> string
 

@@ -11,15 +11,24 @@ fun template (mb:transaction xbody) : transaction page =
 
 fun render (j:C.job) : xbody =
     <xml>
+      <div>
       Job : {[j.JobRef]}
       <br/>
       ExitCode : {[j.ExitCode]}
       <br/>
       Stdout:  {[j.Stdout]}
+      </div>
     </xml>
 
 fun job_monitor (jr:C.jobref) : transaction page =
-  template (C.monitorX jr render)
+  template (
+    n <- C.abortMore 30;
+    x <- C.monitorX jr render;
+    return <xml>
+      Job <br/> {x} <br/>
+      Nactive : {[n]}
+    </xml>
+    )
 
 fun job_start {} : transaction page =
   jr <- C.nextjob {};
