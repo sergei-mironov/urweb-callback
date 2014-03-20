@@ -41,6 +41,7 @@ uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job
 uw_Basis_string uw_CallbackFFI_cmd(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job j);
+uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_blob _stdin, uw_Basis_int maxsz);
 
 uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string s);
 

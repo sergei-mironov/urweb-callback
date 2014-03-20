@@ -31,8 +31,8 @@ sequence jobrefs
 
 fun job_start {} : transaction page =
   jr <- nextval jobrefs;
-  j <- CallbackFFI.create "for i in `seq 1 1 15`; do echo -n $i; sleep 2 ; done" 100 jr;
-  CallbackFFI.run j (textBlob "") (Some (url (job_finishead (ref j))));
+  j <- CallbackFFI.create "cat; for i in `seq 1 1 15`; do echo -n $i; sleep 2 ; done" 100 jr;
+  CallbackFFI.run j (textBlob "Hello") (Some (url (job_finishead (ref j))));
   redirect (url (job_monitor (ref j)))
 
 fun main {} : transaction page = template (

@@ -65,7 +65,10 @@ typedef long int jkey;
 struct job {
   job(jkey _key, const string &_cmd, int _bufsize, atomic& counter_) :
 		  key(_key), cmd(_cmd), counter(counter_) {
-    buf_read.resize(_bufsize);
+    buf_stdout.resize(_bufsize);
+    sz_stdout = 0;
+    sz_stdin = 0;
+    exitcode = -1;
     counter++;
   }
 
@@ -84,13 +87,14 @@ struct job {
   mutex m;
 
   // Exit code. Needs mutex.
-  int exitcode = -1;
+  int exitcode;
 
-  size_t total_read = 0;
-  size_t total_written = 0;
+  size_t sz_stdout;
+  size_t sz_stdin;
 
   // Data to read from job's stdout. Needs mutex.
-  blob buf_read;
+  blob buf_stdout;
+  blob buf_stdin;
 
   // Infrastructure errors (not stderr). Needs mutex.
   oss err;
@@ -131,7 +135,7 @@ private:
 /*{{{*/
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
-static void execute(jptr r, const blob& buf_write, uw_loggers *ls)
+static void execute(jptr r, uw_loggers *ls)
 {
   uw_System_pipe ur_to_cmd;
   uw_System_pipe cmd_to_ur;
@@ -206,7 +210,7 @@ static void execute(jptr r, const blob& buf_write, uw_loggers *ls)
           MY_FD_SET_546( cmd_to_ur2[0], &rfds );
         }
 
-        if (r->total_written < buf_write.size()){
+        if (r->sz_stdin < r->buf_stdin.size()) {
           MY_FD_SET_546( ur_to_cmd[1], &wfds );
         }
 
@@ -235,19 +239,19 @@ static void execute(jptr r, const blob& buf_write, uw_loggers *ls)
           ret--;
           size_t bytes_read;
 
-          if(r->total_read < r->buf_read.size()) {
+          if(r->sz_stdout < r->buf_stdout.size()) {
             // FIXME: calling C read while holding a mutex. Looks safe, but
             // still suspicious.
             jlock _(r);
-            bytes_read = read(cmd_to_ur[0], &r->buf_read[r->total_read], r->buf_read.size() - r->total_read);
+            bytes_read = read(cmd_to_ur[0], &r->buf_stdout[r->sz_stdout], r->buf_stdout.size() - r->sz_stdout);
 
             if(bytes_read < 0)
               r->throw_c([=](oss& e) { e << "read failed" ; });
 
-            r->total_read += bytes_read;
+            r->sz_stdout += bytes_read;
           }
           else {
-            blob devnull(r->buf_read.size() / 2);
+            blob devnull(r->buf_stdout.size() / 2);
 
             bytes_read = read(cmd_to_ur[0], &devnull[0], devnull.size());
 
@@ -255,8 +259,8 @@ static void execute(jptr r, const blob& buf_write, uw_loggers *ls)
               r->throw_c([=](oss& e) { e << "read failed (devnull)" ; });
             else {
               jlock _(r);
-              memcpy(&r->buf_read[0], &r->buf_read[bytes_read], r->buf_read.size() - bytes_read);
-              memcpy(&r->buf_read[r->buf_read.size() - bytes_read], &devnull[0], bytes_read);
+              memcpy(&r->buf_stdout[0], &r->buf_stdout[bytes_read], r->buf_stdout.size() - bytes_read);
+              memcpy(&r->buf_stdout[r->buf_stdout.size() - bytes_read], &devnull[0], bytes_read);
             }
           }
 
@@ -269,14 +273,18 @@ static void execute(jptr r, const blob& buf_write, uw_loggers *ls)
         if (FD_ISSET( ur_to_cmd[1], &wfds )) {
           ret--;
 
-          size_t written = write(ur_to_cmd[1], &buf_write[r->total_written], buf_write.size() - r->total_written);
+          // FIXME: calling C write while holding a mutex. Looks safe, but
+          // still suspicious.
+          jlock _(r);
+
+          size_t written = write(ur_to_cmd[1], &r->buf_stdin[r->sz_stdin], r->buf_stdin.size() - r->sz_stdin);
 
           if(written < 0)
             r->throw_c([=](oss& e) { e << "write failed" ; });
 
-          r->total_written += written;
+          r->sz_stdin += written;
 
-          if (r->total_written == buf_write.size()) {
+          if (r->sz_stdin == r->buf_stdin.size()) {
             UW_SYSTEM_PIPE_CLOSE_IN(ur_to_cmd);
           }
         }
@@ -365,22 +373,50 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   return pp;
 }
 
+uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
+    uw_CallbackFFI_job j,
+    uw_Basis_blob _stdin,
+    uw_Basis_int maxsz)
+{
+  int ret = -1;
+
+  {
+    jlock _(get(j));
+    blob &buf_stdin = get(j)->buf_stdin;
+    size_t oldsz = buf_stdin.size() - get(j)->sz_stdin;
+    size_t newsz = buf_stdin.size() + _stdin.size - get(j)->sz_stdin;
+    if(newsz <= maxsz ) {
+      buf_stdin.resize(newsz);
+      memcpy(&buf_stdin[0], &buf_stdin[get(j)->sz_stdin], oldsz);
+      memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
+      get(j)->sz_stdin = 0;
+      ret = 0;
+    }
+  }
+
+  if(ret != 0)
+    uw_error(ctx, FATAL, "job %d stdin size exceeded\n", get(j)->key);
+
+  return 0;
+}
+
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job _j,
   uw_Basis_blob _stdin,
   uw_Basis_string mb_url)
 {
+  uw_CallbackFFI_pushStdin(ctx, _j, _stdin, _stdin.size);
 
   uw_context* ctx2 = uw_init(-1, uw_get_loggers(ctx));
   uw_set_app(ctx2, uw_get_app(ctx));
   uw_set_headers(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
   uw_set_env(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
 
-  struct pack { string u; jptr j; blob b; uw_context *ctx; };
+  struct pack { string u; jptr j; uw_context *ctx; };
 
   uw_register_transactional(ctx,
-    new pack {mb_url?mb_url:"", get(_j), blob(_stdin.data, _stdin.data + _stdin.size), ctx2},
+    new pack {mb_url?mb_url:"", get(_j), ctx2},
     [](void* data) {
       std::thread t([](pack *p){
 
@@ -388,7 +424,7 @@ uw_Basis_unit uw_CallbackFFI_run(
         uw_loggers *ls = uw_get_loggers(p->ctx);
 
         try {
-          execute(p->j, p->b, ls);
+          execute(p->j, ls);
         }
         catch(job::exception &e) {
           fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
@@ -539,11 +575,11 @@ uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_
 
 uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
-  size_t sz = get(j)->total_read;
+  size_t sz = get(j)->sz_stdout;
   char* str = (char*)uw_malloc(ctx, sz + 1);
 
   jlock _(get(j));
-  memcpy(str, get(j)->buf_read.data(), sz);
+  memcpy(str, get(j)->buf_stdout.data(), sz);
   str[sz] = 0;
 
   return str;
@@ -605,9 +641,10 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
   uw_Basis_int jobref)
 {
   uw_CallbackFFI_job j = uw_CallbackFFI_create(ctx, cmd, stdout_sz, jobref);
+  uw_CallbackFFI_pushStdin(ctx, j, _stdin, _stdin.size);
 
   try {
-    execute(get(j), blob(_stdin.data, _stdin.data + _stdin.size), uw_get_loggers(ctx));
+    execute(get(j), uw_get_loggers(ctx));
   }
   catch(job::exception &e) {
     fprintf(stderr,"CallbackFFI::runNow error: %s\n", e.c_str());
