@@ -235,7 +235,6 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
         if (ret < 0) {
           if(errno == EINTR) {
-            fprintf(stderr, "EINTR from select\n");
             continue;
           }
           else {
@@ -438,10 +437,10 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 
   switch(ret) {
     case closed:
-      uw_error(ctx, FATAL, "job %d stdin size exceeded\n", get(j)->key);
+      uw_error(ctx, FATAL, "job %d stdin closed\n", get(j)->key);
       break;
     case err:
-      uw_error(ctx, FATAL, "job %d stdin size exceeded\n", get(j)->key);
+      uw_error(ctx, FATAL, "job %d stdin size exceeds limit\n", get(j)->key);
       break;
     default:
       break;
