@@ -5,8 +5,7 @@ table jobs : $jobrec
   PRIMARY KEY JobRef
 
 type jobargs = {
-    JobRef : int
-  , Cmd : string
+    Cmd : string
   , Stdin : option blob
   }
 
@@ -17,7 +16,7 @@ signature S = sig
 
   val create : jobref -> string -> blob -> transaction unit
 
-  val create2 : jobargs -> transaction unit
+  val create2 : jobref -> jobargs -> transaction unit
 
   val get : jobref -> transaction (record jobrec)
 

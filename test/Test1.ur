@@ -34,7 +34,7 @@ fun job_start {} : transaction page =
   j <- CallbackFFI.create "cat; for i in `seq 1 1 5`; do echo -n $i; sleep 2 ; done" 100 jr;
   CallbackFFI.setCompletionCB j (Some (url (job_finishead (ref j))));
   CallbackFFI.pushStdin j (textBlob "Hello") 1024;
-  CallbackFFI.pushStdin j (textBlob "") 1024;
+  CallbackFFI.pushStdinEOF j;
   CallbackFFI.run j;
   redirect (url (job_monitor (ref j)))
 

@@ -223,11 +223,8 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
           MY_FD_SET_546( cmd_to_ur2[0], &rfds );
         }
 
-        {
-          jlock _(r);
-          if (r->sz_stdin < r->buf_stdin.size() && ur_to_cmd[1+2] != 0) {
-            MY_FD_SET_546( ur_to_cmd[1], &wfds );
-          }
+        if (ur_to_cmd[1+2] != 0) {
+          MY_FD_SET_546( ur_to_cmd[1], &wfds );
         }
 
         struct timespec tv;
@@ -425,9 +422,7 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
         memcpy(&buf_stdin[0], &buf_stdin[get(j)->sz_stdin], oldsz);
         memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
         get(j)->sz_stdin = 0;
-        if(_stdin.size == 0) {
-          get(j)->close_stdin = true;
-        }
+
         if(get(j)->thread_started)
           pthread_kill(get(j)->thread, JOB_SIGNAL);
         ret = ok;
@@ -449,6 +444,15 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
       break;
   }
 
+  return 0;
+}
+
+uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI_job j)
+{
+  jlock _(get(j));
+  get(j)->close_stdin = true;
+  if(get(j)->thread_started)
+    pthread_kill(get(j)->thread, JOB_SIGNAL);
   return 0;
 }
 
@@ -746,11 +750,7 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
 {
   uw_CallbackFFI_job j = uw_CallbackFFI_create(ctx, cmd, stdout_sz, jobref);
   uw_CallbackFFI_pushStdin(ctx, j, _stdin, _stdin.size);
-
-  uw_Basis_blob eof;
-  eof.data = NULL;
-  eof.size = 0;
-  uw_CallbackFFI_pushStdin(ctx, j, eof, _stdin.size);
+  uw_CallbackFFI_pushStdinEOF(ctx, j);
 
   try {
     execute(get(j), uw_get_loggers(ctx), NULL);

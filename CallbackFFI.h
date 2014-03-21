@@ -26,6 +26,7 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
 uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl);
 uw_Basis_unit uw_CallbackFFI_setNotifyCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl);
 uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_blob _stdin, uw_Basis_int maxsz);
+uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI_job j);
 
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,

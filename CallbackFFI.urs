@@ -7,6 +7,7 @@ val create : string -> int -> jobref -> transaction job
 val setCompletionCB : job -> option url -> transaction unit
 val setNotifyCB : job -> option url -> transaction unit
 val pushStdin : job -> blob -> int -> transaction unit
+val pushStdinEOF : job -> transaction unit
 val run: job -> transaction unit
 val cleanup: job -> transaction unit
 

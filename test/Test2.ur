@@ -67,7 +67,7 @@ and form {} : transaction xbody =
           jr <- nextval jobrefs;
           j <- CallbackFFI.create s.UName 100 jr;
           CallbackFFI.setCompletionCB j (Some (url (finished (ref j))));
-          CallbackFFI.pushStdin j (textBlob "") 1024;
+          CallbackFFI.pushStdinEOF j;
           CallbackFFI.run j;
           redirect (url (monitor (ref j)))
 

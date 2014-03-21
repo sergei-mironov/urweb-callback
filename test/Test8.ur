@@ -11,7 +11,9 @@ fun template (mb:transaction xbody) : transaction page =
 
 fun feed jr i : transaction page =
   j <- CF.deref jr;
-  CF.pushStdin j (textBlob i.Text) 1024;
+  (case i.Text = "" of
+    |True => CF.pushStdinEOF j
+    |False => CF.pushStdin j (textBlob i.Text) 1024);
   redirect (url (job_monitor jr))
 
 and job_monitor (jr:C.jobref) : transaction page = template (
@@ -19,6 +21,8 @@ and job_monitor (jr:C.jobref) : transaction page = template (
   return <xml>
     <div>
       Job : {[jr]}
+      <br/>
+      Cmd : {[j.Cmd]}
       <br/>
       ExitCode : {[j.ExitCode]}
       <br/>
@@ -35,9 +39,11 @@ and job_monitor (jr:C.jobref) : transaction page = template (
     </div>
   </xml>)
 
+val ja = { Cmd = "cat" , Stdin = Some (textBlob "Hello, kitty\n") }
+
 fun job_start {} : transaction page =
   jr <- C.nextjob {};
-  C.create jr "cat" (textBlob "Hello, kitty");
+  C.create2 jr ja;
   redirect (url (job_monitor jr))
 
 fun main {} : transaction page = template (
@@ -45,3 +51,4 @@ fun main {} : transaction page = template (
     <xml>
       <a link={job_start {}}>Start a sleep job</a>
     </xml>)
+
