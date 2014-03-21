@@ -87,6 +87,9 @@ struct job {
 
   string cmd;
 
+  string url_completion_cb;
+  string url_notify_cb;
+
   int pid = -1;
 
   // Host thread running the job
@@ -449,23 +452,43 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
   return 0;
 }
 
+uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)
+{
+  jlock _(get(j));
+  if(mburl) {
+    get(j)->url_completion_cb = string(mburl);
+  }
+  else {
+    get(j)->url_completion_cb = string();
+  }
+  return 0;
+}
+
+uw_Basis_unit uw_CallbackFFI_setNotifyCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)
+{
+  jlock _(get(j));
+  if(mburl) {
+    get(j)->url_notify_cb = string(mburl);
+  }
+  else {
+    get(j)->url_notify_cb = string();
+  }
+  return 0;
+}
+
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
-  uw_CallbackFFI_job _j,
-  uw_Basis_blob _stdin,
-  uw_Basis_string mb_url)
+  uw_CallbackFFI_job _j)
 {
-  uw_CallbackFFI_pushStdin(ctx, _j, _stdin, _stdin.size);
-
   uw_context* ctx2 = uw_init(-1, uw_get_loggers(ctx));
   uw_set_app(ctx2, uw_get_app(ctx));
   uw_set_headers(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
   uw_set_env(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
 
-  struct pack { string u; jptr j; uw_context *ctx; };
+  struct pack { jptr j; uw_context *ctx; };
 
   uw_register_transactional(ctx,
-    new pack {mb_url?mb_url:"", get(_j), ctx2},
+    new pack {get(_j), ctx2},
     [](void* p_) {
       pack* p = (pack*)p_;
       int ret;
@@ -497,8 +520,15 @@ uw_Basis_unit uw_CallbackFFI_run(
           fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
         }
 
-        if(p->u.size() > 0) {
-          char *path = (char*)p->u.c_str(); // FIXME C-cast
+        char* path = NULL;
+
+        {
+          jlock _(p->j);
+          if(p->j->url_completion_cb.size() > 0)
+            path = strdup(p->j->url_completion_cb.c_str());
+        }
+
+        if(path) {
 
           int retries_left;
           failure_kind fk;
@@ -558,6 +588,7 @@ uw_Basis_unit uw_CallbackFFI_run(
 
       out:
         uw_free(p->ctx);
+        if(path) free(path);
         delete p;
         return NULL;
 
@@ -715,6 +746,11 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
 {
   uw_CallbackFFI_job j = uw_CallbackFFI_create(ctx, cmd, stdout_sz, jobref);
   uw_CallbackFFI_pushStdin(ctx, j, _stdin, _stdin.size);
+
+  uw_Basis_blob eof;
+  eof.data = NULL;
+  eof.size = 0;
+  uw_CallbackFFI_pushStdin(ctx, j, eof, _stdin.size);
 
   try {
     execute(get(j), uw_get_loggers(ctx), NULL);

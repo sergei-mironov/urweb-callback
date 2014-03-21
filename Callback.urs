@@ -4,12 +4,20 @@ con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdout = string
 table jobs : $jobrec
   PRIMARY KEY JobRef
 
+type jobargs = {
+    JobRef : int
+  , Cmd : string
+  , Stdin : option blob
+  }
+
 signature S = sig
   type jobref = CallbackFFI.jobref
 
   val nextjob : unit -> transaction jobref
 
   val create : jobref -> string -> blob -> transaction unit
+
+  val create2 : jobargs -> transaction unit
 
   val get : jobref -> transaction (record jobrec)
 

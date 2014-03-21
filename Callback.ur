@@ -9,12 +9,20 @@ sequence jobrefs
 table jobs : $jobrec
   PRIMARY KEY JobRef
 
+type jobargs = {
+    JobRef : int
+  , Cmd : string
+  , Stdin : option blob
+  }
+
 signature S = sig
   type jobref = CallbackFFI.jobref
 
   val nextjob : unit -> transaction jobref
 
   val create : jobref -> string -> blob -> transaction unit
+
+  val create2 : jobargs -> transaction unit
 
   val get : jobref -> transaction (record jobrec)
 
@@ -63,7 +71,23 @@ struct
     j <- CallbackFFI.create cmd S.stdout_sz jr;
     dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, ""));
     debug ("job create " ^ (show jr));
-    CallbackFFI.run j inp (Some (url (callback jr)));
+    CallbackFFI.setCompletionCB j (Some (url (callback jr)));
+    CallbackFFI.pushStdin j inp (blobSize inp);
+    case (blobSize inp) > 0 of
+      |True => CallbackFFI.pushStdin j (textBlob "") (blobSize inp)
+      |False => return {};
+    CallbackFFI.run j;
+    return {}
+
+  fun create2 (ja : jobargs) : transaction unit =
+    j <- CallbackFFI.create ja.Cmd S.stdout_sz ja.JobRef;
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[ja.JobRef]}, {[None]}, {[ja.Cmd]}, ""));
+    debug ("job create2 " ^ (show ja.JobRef));
+    CallbackFFI.setCompletionCB j (Some (url (callback ja.JobRef)));
+    (case ja.Stdin of
+     |Some i => CallbackFFI.pushStdin j i (blobSize i)
+     |None => return {});
+    CallbackFFI.run j;
     return {}
 
   val lastLine = CallbackFFI.lastLine

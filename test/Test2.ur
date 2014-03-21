@@ -66,7 +66,9 @@ and form {} : transaction xbody =
         fun start {} : transaction xbody =
           jr <- nextval jobrefs;
           j <- CallbackFFI.create s.UName 100 jr;
-          CallbackFFI.run j (textBlob "") (Some (url (finished (ref j))));
+          CallbackFFI.setCompletionCB j (Some (url (finished (ref j))));
+          CallbackFFI.pushStdin j (textBlob "") 1024;
+          CallbackFFI.run j;
           redirect (url (monitor (ref j)))
 
         fun retry {} : transaction xbody = (
