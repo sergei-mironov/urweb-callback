@@ -12,7 +12,12 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test6.db ./test/Test6.exe ./test/Test6.sql
+all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test8.db ./test/Test8.exe ./test/Test8.sql
+./test/Test8.db: ./Makefile ./test/Test8.exe ./test/Test8.sql
+	dropdb --if-exists Test8
+	createdb Test8
+	psql -f ./test/Test8.sql Test8
+	touch ./test/Test8.db
 ./test/Test6.db: ./Makefile ./test/Test6.exe ./test/Test6.sql
 	dropdb --if-exists Test6
 	createdb Test6
@@ -43,6 +48,32 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 	createdb Test1
 	psql -f ./test/Test1.sql Test1
 	touch ./test/Test1.db
+./test/Test8.exe: .fix-multy7
+./test/Test8.urp: ./Makefile ./lib.urp ./test/Test8.ur ./test/Test8.urs .cake3/tmp7
+	cat .cake3/tmp7 > ./test/Test8.urp
+.cake3/tmp7: ./Makefile
+	-rm -rf .cake3/tmp7
+	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp7
+	echo 'allow mime text/javascript' >> .cake3/tmp7
+	echo 'allow mime text/css' >> .cake3/tmp7
+	echo 'allow mime image/jpeg' >> .cake3/tmp7
+	echo 'allow mime image/png' >> .cake3/tmp7
+	echo 'allow mime image/gif' >> .cake3/tmp7
+	echo 'database dbname=Test8' >> .cake3/tmp7
+	echo 'safeGet Test8/main' >> .cake3/tmp7
+	echo 'safeGet Test8/job_monitor' >> .cake3/tmp7
+	echo 'safeGet Test8/job_start' >> .cake3/tmp7
+	echo 'safeGet Test8/finished' >> .cake3/tmp7
+	echo 'safeGet Test8/cleanup' >> .cake3/tmp7
+	echo 'safeGet Test8/monitor' >> .cake3/tmp7
+	echo 'safeGet Test8/run' >> .cake3/tmp7
+	echo 'safeGet Test8/C/callback' >> .cake3/tmp7
+	echo 'sql .././test/Test8.sql' >> .cake3/tmp7
+	echo 'library ../.' >> .cake3/tmp7
+	echo 'debug' >> .cake3/tmp7
+	echo '' >> .cake3/tmp7
+	echo '$$/list' >> .cake3/tmp7
+	echo '.././test/Test8' >> .cake3/tmp7
 ./test/Test6.exe: .fix-multy6
 ./test/Test6.urp: ./Makefile ./lib.urp ./test/Test6.ur ./test/Test6.urs .cake3/tmp6
 	cat .cake3/tmp6 > ./test/Test6.urp
@@ -220,6 +251,7 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 ./test/Test4.sql: .fix-multy4
 ./test/Test5.sql: .fix-multy5
 ./test/Test6.sql: .fix-multy6
+./test/Test8.sql: .fix-multy7
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: ./Makefile ./test/Test1.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test1
@@ -238,6 +270,9 @@ all: ./Makefile ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.d
 .INTERMEDIATE: .fix-multy6
 .fix-multy6: ./Makefile ./test/Test6.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test6
+.INTERMEDIATE: .fix-multy7
+.fix-multy7: ./Makefile ./test/Test8.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test8
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -261,6 +296,8 @@ ifneq ($(MAKECMDGOALS),clean)
 
 .PHONY: all
 all: .fix-multy1
+.PHONY: ./test/Test8.db
+./test/Test8.db: .fix-multy1
 .PHONY: ./test/Test6.db
 ./test/Test6.db: .fix-multy1
 .PHONY: ./test/Test5.db
@@ -273,6 +310,12 @@ all: .fix-multy1
 ./test/Test2.db: .fix-multy1
 .PHONY: ./test/Test1.db
 ./test/Test1.db: .fix-multy1
+.PHONY: ./test/Test8.exe
+./test/Test8.exe: .fix-multy1
+.PHONY: ./test/Test8.urp
+./test/Test8.urp: .fix-multy1
+.PHONY: .cake3/tmp7
+.cake3/tmp7: .fix-multy1
 .PHONY: ./test/Test6.exe
 ./test/Test6.exe: .fix-multy1
 .PHONY: ./test/Test6.urp
@@ -327,6 +370,8 @@ all: .fix-multy1
 ./test/Test5.sql: .fix-multy1
 .PHONY: ./test/Test6.sql
 ./test/Test6.sql: .fix-multy1
+.PHONY: ./test/Test8.sql
+./test/Test8.sql: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3
@@ -335,7 +380,7 @@ all: .fix-multy1
 endif
 .PHONY: clean
 clean: 
-	-rm ./CallbackFFI.o ./lib.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test5.urp ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test6.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5 .cake3/tmp6
+	-rm ./CallbackFFI.o ./lib.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test5.urp ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test6.urp ./test/Test8.db ./test/Test8.exe ./test/Test8.sql ./test/Test8.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5 .cake3/tmp6 .cake3/tmp7
 	-rm -rf .cake3
 
 endif

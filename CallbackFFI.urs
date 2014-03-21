@@ -13,6 +13,7 @@ val tryDeref : jobref -> transaction (option job)
 val deref : jobref -> transaction job
 val ref : job -> jobref
 
+val pushStdin : job -> blob -> int -> transaction unit
 val pid : job -> int
 val exitcode : job -> int
 val stdout : job -> string

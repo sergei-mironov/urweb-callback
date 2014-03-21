@@ -23,6 +23,7 @@ project = do
               , "test/Test4.urp"
               , "test/Test5.urp"
               , "test/Test6.urp"
+              , "test/Test8.urp"
               ]
 
   ts <- forM tests $ \t -> do

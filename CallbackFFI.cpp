@@ -12,6 +12,7 @@ extern "C" {
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <pthread.h>
 
 #include <urweb_cpp.h>
 #include <srvthread.h>
@@ -23,10 +24,10 @@ extern "C" {
 #include <memory>
 #include <sstream>
 #include <vector>
-#include <thread>
 #include <algorithm>
 #include <mutex>
 #include <atomic>
+#include <climits>
 
 
 #define dprintf printf
@@ -34,14 +35,16 @@ extern "C" {
 /* 0,1 are pipe ids, 2,3 is zero if pipe is closed */
 typedef int uw_System_pipe[4];
 
+#define JOB_SIGNAL SIGUSR1
+
 #define UR_SYSTEM_POLL_TIMOUT_MS 1000
 
 #define UW_SYSTEM_PIPE_INIT(x) { x[2] = 0; x[3]=0; }
 #define UW_SYSTEM_PIPE_CLOSE_IN(x)  { close(x[1]); x[1+2] = 0; }
 #define UW_SYSTEM_PIPE_CLOSE_OUT(x) { close(x[0]); x[0+2] = 0; }
 #define UW_SYSTEM_PIPE_CLOSE(x) do { \
-    if (x[2]) { close(x[0]); x[2] = 0; } \
-    if (x[3]) { close(x[1]); x[3] = 0; } \
+    if (x[0+2]) { close(x[0]); x[0+2] = 0; } \
+    if (x[1+2]) { close(x[1]); x[1+2] = 0; } \
   } while(0)
 
 #define UW_SYSTEM_PIPE_CREATE(x) do {     \
@@ -69,6 +72,8 @@ struct job {
     sz_stdout = 0;
     sz_stdin = 0;
     exitcode = -1;
+    close_stdin = false;
+    thread_started = false;
     counter++;
   }
 
@@ -84,15 +89,20 @@ struct job {
 
   int pid = -1;
 
+  // Host thread running the job
+  pthread_t thread;
+  bool thread_started;
+
   mutex m;
 
   // Exit code. Needs mutex.
   int exitcode;
 
+  bool close_stdin;
+
   size_t sz_stdout;
   size_t sz_stdin;
 
-  // Data to read from job's stdout. Needs mutex.
   blob buf_stdout;
   blob buf_stdin;
 
@@ -135,7 +145,7 @@ private:
 /*{{{*/
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
-static void execute(jptr r, uw_loggers *ls)
+static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 {
   uw_System_pipe ur_to_cmd;
   uw_System_pipe cmd_to_ur;
@@ -210,18 +220,28 @@ static void execute(jptr r, uw_loggers *ls)
           MY_FD_SET_546( cmd_to_ur2[0], &rfds );
         }
 
-        if (r->sz_stdin < r->buf_stdin.size()) {
-          MY_FD_SET_546( ur_to_cmd[1], &wfds );
+        {
+          jlock _(r);
+          if (r->sz_stdin < r->buf_stdin.size() && ur_to_cmd[1+2] != 0) {
+            MY_FD_SET_546( ur_to_cmd[1], &wfds );
+          }
         }
 
-        struct timeval tv;
+        struct timespec tv;
         tv.tv_sec  = UR_SYSTEM_POLL_TIMOUT_MS / 1000;
-        tv.tv_usec = (UR_SYSTEM_POLL_TIMOUT_MS % 1000) * (1000000/1000);
+        tv.tv_nsec = (UR_SYSTEM_POLL_TIMOUT_MS % 1000) * 1000;
 
-        int ret = select(max_fd+1, &rfds, &wfds, &efds, &tv);
+        int ret = pselect(max_fd+1, &rfds, &wfds, &efds, &tv, pss);
 
-        if (ret < 0)
-          r->throw_c([=](oss& e) { e << "select failed" ; });
+        if (ret < 0) {
+          if(errno == EINTR) {
+            fprintf(stderr, "EINTR from select\n");
+            continue;
+          }
+          else {
+            r->throw_c([=](oss& e) { e << "select failed" ; });
+          }
+        }
 
         if (FD_ISSET( cmd_to_ur2[0], &rfds )) {
           ret--;
@@ -245,8 +265,12 @@ static void execute(jptr r, uw_loggers *ls)
             jlock _(r);
             bytes_read = read(cmd_to_ur[0], &r->buf_stdout[r->sz_stdout], r->buf_stdout.size() - r->sz_stdout);
 
-            if(bytes_read < 0)
-              r->throw_c([=](oss& e) { e << "read failed" ; });
+            if(bytes_read < 0) {
+              if(errno == EINTR)
+                continue;
+              else
+                r->throw_c([=](oss& e) { e << "read failed" ; });
+            }
 
             r->sz_stdout += bytes_read;
           }
@@ -255,8 +279,12 @@ static void execute(jptr r, uw_loggers *ls)
 
             bytes_read = read(cmd_to_ur[0], &devnull[0], devnull.size());
 
-            if(bytes_read < 0)
-              r->throw_c([=](oss& e) { e << "read failed (devnull)" ; });
+            if(bytes_read < 0) {
+              if(errno == EINTR)
+                continue;
+              else
+                r->throw_c([=](oss& e) { e << "read failed (devnull)" ; });
+            }
             else {
               jlock _(r);
               memcpy(&r->buf_stdout[0], &r->buf_stdout[bytes_read], r->buf_stdout.size() - bytes_read);
@@ -279,12 +307,16 @@ static void execute(jptr r, uw_loggers *ls)
 
           size_t written = write(ur_to_cmd[1], &r->buf_stdin[r->sz_stdin], r->buf_stdin.size() - r->sz_stdin);
 
-          if(written < 0)
-            r->throw_c([=](oss& e) { e << "write failed" ; });
+          if(written < 0) {
+            if (errno == EINTR)
+              continue;
+            else
+              r->throw_c([=](oss& e) { e << "write failed" ; });
+          }
 
           r->sz_stdin += written;
 
-          if (r->sz_stdin == r->buf_stdin.size()) {
+          if ((r->sz_stdin == r->buf_stdin.size()) && r->close_stdin) {
             UW_SYSTEM_PIPE_CLOSE_IN(ur_to_cmd);
           }
         }
@@ -378,24 +410,42 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
     uw_Basis_blob _stdin,
     uw_Basis_int maxsz)
 {
-  int ret = -1;
+  enum {ok, closed, err} ret = err;
 
   {
     jlock _(get(j));
-    blob &buf_stdin = get(j)->buf_stdin;
-    size_t oldsz = buf_stdin.size() - get(j)->sz_stdin;
-    size_t newsz = buf_stdin.size() + _stdin.size - get(j)->sz_stdin;
-    if(newsz <= maxsz ) {
-      buf_stdin.resize(newsz);
-      memcpy(&buf_stdin[0], &buf_stdin[get(j)->sz_stdin], oldsz);
-      memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
-      get(j)->sz_stdin = 0;
-      ret = 0;
+    if(!get(j)->close_stdin) {
+      blob &buf_stdin = get(j)->buf_stdin;
+      size_t oldsz = buf_stdin.size() - get(j)->sz_stdin;
+      size_t newsz = buf_stdin.size() + _stdin.size - get(j)->sz_stdin;
+      if(newsz <= maxsz ) {
+        buf_stdin.resize(newsz);
+        memcpy(&buf_stdin[0], &buf_stdin[get(j)->sz_stdin], oldsz);
+        memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
+        get(j)->sz_stdin = 0;
+        if(_stdin.size == 0) {
+          get(j)->close_stdin = true;
+        }
+        if(get(j)->thread_started)
+          pthread_kill(get(j)->thread, JOB_SIGNAL);
+        ret = ok;
+      }
+    }
+    else {
+      ret = closed;
     }
   }
 
-  if(ret != 0)
-    uw_error(ctx, FATAL, "job %d stdin size exceeded\n", get(j)->key);
+  switch(ret) {
+    case closed:
+      uw_error(ctx, FATAL, "job %d stdin size exceeded\n", get(j)->key);
+      break;
+    case err:
+      uw_error(ctx, FATAL, "job %d stdin size exceeded\n", get(j)->key);
+      break;
+    default:
+      break;
+  }
 
   return 0;
 }
@@ -417,14 +467,32 @@ uw_Basis_unit uw_CallbackFFI_run(
 
   uw_register_transactional(ctx,
     new pack {mb_url?mb_url:"", get(_j), ctx2},
-    [](void* data) {
-      std::thread t([](pack *p){
+    [](void* p_) {
+      pack* p = (pack*)p_;
+      int ret;
+      
+      ret = pthread_create(&p->j->thread, NULL, [](void *p_) -> void* {
+        pack* p = (pack*)p_;
 
         uw_context *ctx = p->ctx;
         uw_loggers *ls = uw_get_loggers(p->ctx);
 
+        struct sigaction s;
+        memset(&s, 0, sizeof(struct sigaction));
+        s.sa_handler = [](int signo) -> void { (void) signo; };
+        sigemptyset(&s.sa_mask);
+        s.sa_flags = 0;
+        sigaction(JOB_SIGNAL, &s, NULL);
+
+        sigset_t ss, oldss;
+        sigemptyset(&ss);
+        sigaddset(&ss, JOB_SIGNAL);
+        pthread_sigmask(SIG_BLOCK, &ss, &oldss);
+
+        p->j->thread_started = true;
+
         try {
-          execute(p->j, ls);
+          execute(p->j, ls, &oldss);
         }
         catch(job::exception &e) {
           fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
@@ -492,13 +560,19 @@ uw_Basis_unit uw_CallbackFFI_run(
       out:
         uw_free(p->ctx);
         delete p;
-      }, (pack*)data);
+        return NULL;
 
-      t.detach();
+      }, p_);
+
+      if(ret != 0) {
+        p->j->exitcode = INT_MAX;
+        delete p;
+      }
     },
 
-    [](void *p) {
-      delete (pack*)p;
+    [](void *p_) {
+      pack* p = (pack*)p_;
+      delete p;
     },
 
     [](void *p, int x) {
@@ -644,7 +718,7 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
   uw_CallbackFFI_pushStdin(ctx, j, _stdin, _stdin.size);
 
   try {
-    execute(get(j), uw_get_loggers(ctx));
+    execute(get(j), uw_get_loggers(ctx), NULL);
   }
   catch(job::exception &e) {
     fprintf(stderr,"CallbackFFI::runNow error: %s\n", e.c_str());
