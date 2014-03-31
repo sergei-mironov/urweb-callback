@@ -16,6 +16,7 @@ project = do
     safeGet "CallbackNotify.ur" "C/callback"
     ur (pair "Callback.ur")
     ur (pair "CallbackNotify.ur")
+    ur (pair "CallbackNotify2.ur")
 
   let tests = [ "test/Test1.urp"
               , "test/Test2.urp"
@@ -24,6 +25,7 @@ project = do
               , "test/Test5.urp"
               , "test/Test6.urp"
               , "test/Test8.urp"
+              , "demo/Demo.urp"
               ]
 
   ts <- forM tests $ \t -> do
@@ -43,6 +45,7 @@ project = do
       safeGet (t.="ur") "monitor"
       safeGet (t.="ur") "run"
       safeGet (t.="ur") "C/callback"
+      safeGet (t.="ur") "C/C/callback"
       sql (t.="sql")
       library l
       debug

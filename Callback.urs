@@ -1,5 +1,10 @@
 
-con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdout = string]
+con jobrec = [
+    JobRef = int
+  , ExitCode = option int
+  , Cmd = string
+  , Stdout = string
+  ]
 
 table jobs : $jobrec
   PRIMARY KEY JobRef
