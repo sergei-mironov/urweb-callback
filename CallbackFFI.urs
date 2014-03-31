@@ -11,7 +11,7 @@ val pushStdinEOF : job -> transaction unit
 val run: job -> transaction unit
 val cleanup: job -> transaction unit
 
-val nactive : transaction int
+val nactive : unit -> transaction int
 
 val tryDeref : jobref -> transaction (option job)
 val deref : jobref -> transaction job

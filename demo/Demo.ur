@@ -14,14 +14,27 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
+structure Cat = CallbackNotify2.Make(struct 
+
+  val cmd = "read f; if test -f \"$f\" ; then cat $f ; fi"
+
+  fun render j : transaction xbody =
+    return <xml><pre>{[j.Stdout]}</pre></xml>
+
+end)
+
 fun viewsrc (s:string) : transaction page =
-  template (return <xml>
-    Viewing {[s]}
-  </xml>)
+  template (
+    n <- Cat.abortMore 30;
+    jr <- Cat.create (Some (textBlob (s ^ "\n")));
+    c <- Cat.monitor jr;
+    return <xml>
+      {c}
+    </xml>)
 
 structure Find = CallbackNotify2.Make(struct 
 
-  val cmd = "find -name '*urs' -or -name '*ur'"
+  val cmd = "find -type f -name '*urs' -or -name '*ur'"
 
   fun render j : transaction xbody =
       l <- forXM (lines j.Stdout) (fn s =>
@@ -36,6 +49,7 @@ fun job_monitor jr : transaction page =
     return <xml>{j}</xml>)
 
 fun job_start {} : transaction page =
+  n <- Find.abortMore 30;
   jr <- Find.create None;
   redirect (url (job_monitor jr))
 

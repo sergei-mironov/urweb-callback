@@ -69,7 +69,6 @@ struct
   fun create (jr:jobref) (cmd:string) (inp:blob) : transaction unit =
     j <- CallbackFFI.create cmd S.stdout_sz jr;
     dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, ""));
-    debug ("job create " ^ (show jr));
     CallbackFFI.setCompletionCB j (Some (url (callback jr)));
     CallbackFFI.pushStdin j inp (blobSize inp);
     CallbackFFI.pushStdinEOF j;
@@ -119,7 +118,7 @@ struct
     return {JobRef=jr, ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
 
   val abortMore limit =
-    n <- CallbackFFI.nactive;
+    n <- CallbackFFI.nactive {};
     case n > limit of
       |False => return n
       |True => error (<xml>Active jobs limit exceeded: active {[n]} limit {[limit]}</xml>)

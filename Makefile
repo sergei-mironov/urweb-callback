@@ -74,6 +74,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Demo/run' >> .cake3/tmp8
 	echo 'safeGet Demo/C/callback' >> .cake3/tmp8
 	echo 'safeGet Demo/Find/C/callback' >> .cake3/tmp8
+	echo 'safeGet Demo/Cat/C/callback' >> .cake3/tmp8
+	echo 'safeGet Demo/viewsrc' >> .cake3/tmp8
 	echo 'sql .././demo/Demo.sql' >> .cake3/tmp8
 	echo 'library ../.' >> .cake3/tmp8
 	echo 'debug' >> .cake3/tmp8
@@ -102,6 +104,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test8/run' >> .cake3/tmp7
 	echo 'safeGet Test8/C/callback' >> .cake3/tmp7
 	echo 'safeGet Test8/Find/C/callback' >> .cake3/tmp7
+	echo 'safeGet Test8/Cat/C/callback' >> .cake3/tmp7
+	echo 'safeGet Test8/viewsrc' >> .cake3/tmp7
 	echo 'sql .././test/Test8.sql' >> .cake3/tmp7
 	echo 'library ../.' >> .cake3/tmp7
 	echo 'debug' >> .cake3/tmp7
@@ -130,6 +134,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test6/run' >> .cake3/tmp6
 	echo 'safeGet Test6/C/callback' >> .cake3/tmp6
 	echo 'safeGet Test6/Find/C/callback' >> .cake3/tmp6
+	echo 'safeGet Test6/Cat/C/callback' >> .cake3/tmp6
+	echo 'safeGet Test6/viewsrc' >> .cake3/tmp6
 	echo 'sql .././test/Test6.sql' >> .cake3/tmp6
 	echo 'library ../.' >> .cake3/tmp6
 	echo 'debug' >> .cake3/tmp6
@@ -158,6 +164,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test5/run' >> .cake3/tmp5
 	echo 'safeGet Test5/C/callback' >> .cake3/tmp5
 	echo 'safeGet Test5/Find/C/callback' >> .cake3/tmp5
+	echo 'safeGet Test5/Cat/C/callback' >> .cake3/tmp5
+	echo 'safeGet Test5/viewsrc' >> .cake3/tmp5
 	echo 'sql .././test/Test5.sql' >> .cake3/tmp5
 	echo 'library ../.' >> .cake3/tmp5
 	echo 'debug' >> .cake3/tmp5
@@ -186,6 +194,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test4/run' >> .cake3/tmp4
 	echo 'safeGet Test4/C/callback' >> .cake3/tmp4
 	echo 'safeGet Test4/Find/C/callback' >> .cake3/tmp4
+	echo 'safeGet Test4/Cat/C/callback' >> .cake3/tmp4
+	echo 'safeGet Test4/viewsrc' >> .cake3/tmp4
 	echo 'sql .././test/Test4.sql' >> .cake3/tmp4
 	echo 'library ../.' >> .cake3/tmp4
 	echo 'debug' >> .cake3/tmp4
@@ -214,6 +224,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test3/run' >> .cake3/tmp3
 	echo 'safeGet Test3/C/callback' >> .cake3/tmp3
 	echo 'safeGet Test3/Find/C/callback' >> .cake3/tmp3
+	echo 'safeGet Test3/Cat/C/callback' >> .cake3/tmp3
+	echo 'safeGet Test3/viewsrc' >> .cake3/tmp3
 	echo 'sql .././test/Test3.sql' >> .cake3/tmp3
 	echo 'library ../.' >> .cake3/tmp3
 	echo 'debug' >> .cake3/tmp3
@@ -242,6 +254,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test2/run' >> .cake3/tmp2
 	echo 'safeGet Test2/C/callback' >> .cake3/tmp2
 	echo 'safeGet Test2/Find/C/callback' >> .cake3/tmp2
+	echo 'safeGet Test2/Cat/C/callback' >> .cake3/tmp2
+	echo 'safeGet Test2/viewsrc' >> .cake3/tmp2
 	echo 'sql .././test/Test2.sql' >> .cake3/tmp2
 	echo 'library ../.' >> .cake3/tmp2
 	echo 'debug' >> .cake3/tmp2
@@ -270,6 +284,8 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test1/run' >> .cake3/tmp1
 	echo 'safeGet Test1/C/callback' >> .cake3/tmp1
 	echo 'safeGet Test1/Find/C/callback' >> .cake3/tmp1
+	echo 'safeGet Test1/Cat/C/callback' >> .cake3/tmp1
+	echo 'safeGet Test1/viewsrc' >> .cake3/tmp1
 	echo 'sql .././test/Test1.sql' >> .cake3/tmp1
 	echo 'library ../.' >> .cake3/tmp1
 	echo 'debug' >> .cake3/tmp1

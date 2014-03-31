@@ -75,6 +75,9 @@ struct job {
     close_stdin = false;
     thread_started = false;
     counter++;
+
+    int x = counter;
+    fprintf(stderr, "Hello job #%d (cnt %d)\n", key, x);
   }
 
   ~job() {
@@ -768,9 +771,12 @@ uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_
   return 0;
 }
 
-uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx)
+uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx, uw_Basis_unit u)
 {
-  joblock l;
-  return l.cnt;
+  int x;
+  {joblock l;
+    x = l.cnt;
+  }
+  return x;
 }
 

@@ -22,6 +22,8 @@ signature S = sig
 
   val monitor : jobref -> transaction xbody
 
+  val abortMore : int -> transaction int
+
 end
 
 functor Make(S :
@@ -79,6 +81,7 @@ struct
           <active code={spawn (v <- recv c; set ss v); return <xml/>}/>
           </xml>
 
+  val abortMore = C.abortMore
 end
 
 

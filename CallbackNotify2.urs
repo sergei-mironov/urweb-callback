@@ -14,6 +14,8 @@ signature S = sig
 
   val monitor : jobref -> transaction xbody
 
+  val abortMore : int -> transaction int
+
 end
 
 functor Make(S :
