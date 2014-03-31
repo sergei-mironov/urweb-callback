@@ -45,11 +45,12 @@ project = do
       safeGet (t.="ur") "monitor"
       safeGet (t.="ur") "run"
       safeGet (t.="ur") "C/callback"
-      safeGet (t.="ur") "C/C/callback"
+      safeGet (t.="ur") "Find/C/callback"
       sql (t.="sql")
       library l
       debug
       ur (sys "list")
+      ur (sys "string")
       ur (pair (t.="ur"))
 
   dbs <- forM ts $ \t -> rule $ do

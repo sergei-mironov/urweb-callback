@@ -73,12 +73,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Demo/monitor' >> .cake3/tmp8
 	echo 'safeGet Demo/run' >> .cake3/tmp8
 	echo 'safeGet Demo/C/callback' >> .cake3/tmp8
-	echo 'safeGet Demo/C/C/callback' >> .cake3/tmp8
+	echo 'safeGet Demo/Find/C/callback' >> .cake3/tmp8
 	echo 'sql .././demo/Demo.sql' >> .cake3/tmp8
 	echo 'library ../.' >> .cake3/tmp8
 	echo 'debug' >> .cake3/tmp8
 	echo '' >> .cake3/tmp8
 	echo '$$/list' >> .cake3/tmp8
+	echo '$$/string' >> .cake3/tmp8
 	echo '.././demo/Demo' >> .cake3/tmp8
 ./test/Test8.exe: .fix-multy8
 ./test/Test8.urp: ./Makefile ./lib.urp ./test/Test8.ur ./test/Test8.urs .cake3/tmp7
@@ -100,12 +101,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test8/monitor' >> .cake3/tmp7
 	echo 'safeGet Test8/run' >> .cake3/tmp7
 	echo 'safeGet Test8/C/callback' >> .cake3/tmp7
-	echo 'safeGet Test8/C/C/callback' >> .cake3/tmp7
+	echo 'safeGet Test8/Find/C/callback' >> .cake3/tmp7
 	echo 'sql .././test/Test8.sql' >> .cake3/tmp7
 	echo 'library ../.' >> .cake3/tmp7
 	echo 'debug' >> .cake3/tmp7
 	echo '' >> .cake3/tmp7
 	echo '$$/list' >> .cake3/tmp7
+	echo '$$/string' >> .cake3/tmp7
 	echo '.././test/Test8' >> .cake3/tmp7
 ./test/Test6.exe: .fix-multy7
 ./test/Test6.urp: ./Makefile ./lib.urp ./test/Test6.ur ./test/Test6.urs .cake3/tmp6
@@ -127,12 +129,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test6/monitor' >> .cake3/tmp6
 	echo 'safeGet Test6/run' >> .cake3/tmp6
 	echo 'safeGet Test6/C/callback' >> .cake3/tmp6
-	echo 'safeGet Test6/C/C/callback' >> .cake3/tmp6
+	echo 'safeGet Test6/Find/C/callback' >> .cake3/tmp6
 	echo 'sql .././test/Test6.sql' >> .cake3/tmp6
 	echo 'library ../.' >> .cake3/tmp6
 	echo 'debug' >> .cake3/tmp6
 	echo '' >> .cake3/tmp6
 	echo '$$/list' >> .cake3/tmp6
+	echo '$$/string' >> .cake3/tmp6
 	echo '.././test/Test6' >> .cake3/tmp6
 ./test/Test5.exe: .fix-multy6
 ./test/Test5.urp: ./Makefile ./lib.urp ./test/Test5.ur ./test/Test5.urs .cake3/tmp5
@@ -154,12 +157,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test5/monitor' >> .cake3/tmp5
 	echo 'safeGet Test5/run' >> .cake3/tmp5
 	echo 'safeGet Test5/C/callback' >> .cake3/tmp5
-	echo 'safeGet Test5/C/C/callback' >> .cake3/tmp5
+	echo 'safeGet Test5/Find/C/callback' >> .cake3/tmp5
 	echo 'sql .././test/Test5.sql' >> .cake3/tmp5
 	echo 'library ../.' >> .cake3/tmp5
 	echo 'debug' >> .cake3/tmp5
 	echo '' >> .cake3/tmp5
 	echo '$$/list' >> .cake3/tmp5
+	echo '$$/string' >> .cake3/tmp5
 	echo '.././test/Test5' >> .cake3/tmp5
 ./test/Test4.exe: .fix-multy5
 ./test/Test4.urp: ./Makefile ./lib.urp ./test/Test4.ur ./test/Test4.urs .cake3/tmp4
@@ -181,12 +185,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test4/monitor' >> .cake3/tmp4
 	echo 'safeGet Test4/run' >> .cake3/tmp4
 	echo 'safeGet Test4/C/callback' >> .cake3/tmp4
-	echo 'safeGet Test4/C/C/callback' >> .cake3/tmp4
+	echo 'safeGet Test4/Find/C/callback' >> .cake3/tmp4
 	echo 'sql .././test/Test4.sql' >> .cake3/tmp4
 	echo 'library ../.' >> .cake3/tmp4
 	echo 'debug' >> .cake3/tmp4
 	echo '' >> .cake3/tmp4
 	echo '$$/list' >> .cake3/tmp4
+	echo '$$/string' >> .cake3/tmp4
 	echo '.././test/Test4' >> .cake3/tmp4
 ./test/Test3.exe: .fix-multy4
 ./test/Test3.urp: ./Makefile ./lib.urp ./test/Test3.ur ./test/Test3.urs .cake3/tmp3
@@ -208,12 +213,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test3/monitor' >> .cake3/tmp3
 	echo 'safeGet Test3/run' >> .cake3/tmp3
 	echo 'safeGet Test3/C/callback' >> .cake3/tmp3
-	echo 'safeGet Test3/C/C/callback' >> .cake3/tmp3
+	echo 'safeGet Test3/Find/C/callback' >> .cake3/tmp3
 	echo 'sql .././test/Test3.sql' >> .cake3/tmp3
 	echo 'library ../.' >> .cake3/tmp3
 	echo 'debug' >> .cake3/tmp3
 	echo '' >> .cake3/tmp3
 	echo '$$/list' >> .cake3/tmp3
+	echo '$$/string' >> .cake3/tmp3
 	echo '.././test/Test3' >> .cake3/tmp3
 ./test/Test2.exe: .fix-multy3
 ./test/Test2.urp: ./Makefile ./lib.urp ./test/Test2.ur ./test/Test2.urs .cake3/tmp2
@@ -235,12 +241,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test2/monitor' >> .cake3/tmp2
 	echo 'safeGet Test2/run' >> .cake3/tmp2
 	echo 'safeGet Test2/C/callback' >> .cake3/tmp2
-	echo 'safeGet Test2/C/C/callback' >> .cake3/tmp2
+	echo 'safeGet Test2/Find/C/callback' >> .cake3/tmp2
 	echo 'sql .././test/Test2.sql' >> .cake3/tmp2
 	echo 'library ../.' >> .cake3/tmp2
 	echo 'debug' >> .cake3/tmp2
 	echo '' >> .cake3/tmp2
 	echo '$$/list' >> .cake3/tmp2
+	echo '$$/string' >> .cake3/tmp2
 	echo '.././test/Test2' >> .cake3/tmp2
 ./test/Test1.exe: .fix-multy2
 ./test/Test1.urp: ./Makefile ./lib.urp ./test/Test1.ur ./test/Test1.urs .cake3/tmp1
@@ -262,12 +269,13 @@ all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Test1.db .
 	echo 'safeGet Test1/monitor' >> .cake3/tmp1
 	echo 'safeGet Test1/run' >> .cake3/tmp1
 	echo 'safeGet Test1/C/callback' >> .cake3/tmp1
-	echo 'safeGet Test1/C/C/callback' >> .cake3/tmp1
+	echo 'safeGet Test1/Find/C/callback' >> .cake3/tmp1
 	echo 'sql .././test/Test1.sql' >> .cake3/tmp1
 	echo 'library ../.' >> .cake3/tmp1
 	echo 'debug' >> .cake3/tmp1
 	echo '' >> .cake3/tmp1
 	echo '$$/list' >> .cake3/tmp1
+	echo '$$/string' >> .cake3/tmp1
 	echo '.././test/Test1' >> .cake3/tmp1
 ./lib.urp: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile .cake3/tmp0
 	cat .cake3/tmp0 > ./lib.urp

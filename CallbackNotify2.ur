@@ -18,9 +18,7 @@ signature S = sig
 
   type jobref = CallbackFFI.jobref
 
-  val nextjob : unit -> transaction jobref
-
-  val create : jobref -> string -> option blob -> transaction unit
+  val create : option blob -> transaction jobref
 
   val monitor : jobref -> transaction xbody
 
@@ -28,6 +26,8 @@ end
 
 functor Make(S :
 sig
+
+  val cmd : string
 
   val render : (record jobrec) -> transaction xbody
 
@@ -50,12 +50,12 @@ struct
       return {}
   end)
 
-  val nextjob = C.nextjob
-
-  fun create jr cmd stdin =
-    case stdin of
-      |None => C.create jr cmd (textBlob "")
-      |Some stdin => C.create jr cmd stdin
+  fun create stdin =
+    jr <- C.nextjob {};
+    (case stdin of
+     |None => C.create jr S.cmd (textBlob "")
+     |Some stdin => C.create jr S.cmd stdin);
+    return jr
 
   fun monitor_s (jr:jobref) : transaction jobstatus =
     r <- C.get jr;
