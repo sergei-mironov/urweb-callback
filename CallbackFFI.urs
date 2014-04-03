@@ -2,6 +2,8 @@
 type job
 type jobref = Basis.int
 
+val initialize : int -> transaction unit
+
 val create : string -> int -> jobref -> transaction job
 
 val setCompletionCB : job -> option url -> transaction unit

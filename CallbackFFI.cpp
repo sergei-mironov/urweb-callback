@@ -23,9 +23,11 @@ extern "C" {
 #include <string>
 #include <memory>
 #include <sstream>
+#include <list>
 #include <vector>
 #include <algorithm>
 #include <mutex>
+#include <condition_variable>
 #include <atomic>
 #include <climits>
 
@@ -64,6 +66,7 @@ typedef std::ostringstream oss;
 typedef std::mutex mutex;
 typedef std::atomic<int> atomic;
 typedef long int jkey;
+
 
 struct job {
   job(jkey _key, const string &_cmd, int _bufsize, atomic& counter_) :
@@ -148,7 +151,7 @@ private:
   jptr j;
 };
 
-/*{{{*/
+/*{{{ execute */
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
 static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
@@ -353,6 +356,148 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 }
 /*}}}*/
 
+
+struct notifiers {
+
+  typedef std::pair<jptr, string> jpair;
+
+  static void push(jpair j) {
+    lock l;
+    l.get().push_back(j);
+    l.c.notify_one();
+  }
+
+  // TODO: check whether threads have started successfully or not
+  static void init(uw_context* ctx, int nthreads) {
+
+    threads.resize(nthreads);
+    for (auto i=threads.begin(); i!=threads.end(); i++) {
+      pthread_create(&(*i),NULL,[](void *p_) -> void* {
+        uw_context* ctx_ = (uw_context*) p_;
+        uw_loggers *ls = uw_get_loggers(ctx_);
+
+        uw_context* ctx = uw_init(-1, ls);
+        uw_set_app(ctx, uw_get_app(ctx_));
+        uw_set_headers(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
+        uw_set_env(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
+
+        bool ok = false;
+        int retries_left;
+        failure_kind fk;
+
+        retries_left = 5;
+        while(1) {
+          fk = uw_begin_init(ctx);
+          if (fk == SUCCESS) {
+            ls->log_debug(ls->logger_data, "Database connection initialized.\n");
+            ok = true;
+            break;
+          } else if (fk == BOUNDED_RETRY) {
+            if (retries_left) {
+              ls->log_debug(ls->logger_data, "Initialization error triggers bounded retry: %s\n", uw_error_message(ctx));
+              --retries_left;
+            } else {
+              ls->log_error(ls->logger_data, "Fatal initialization error (out of retries): %s\n", uw_error_message(ctx));
+              break;
+            }
+          } else if (fk == UNLIMITED_RETRY)
+            ls->log_debug(ls->logger_data, "Initialization error triggers unlimited retry: %s\n", uw_error_message(ctx));
+          else if (fk == FATAL) {
+            ls->log_error(ls->logger_data, "Fatal initialization error: %s\n", uw_error_message(ctx));
+            break;
+          } else {
+            ls->log_error(ls->logger_data, "Unknown uw_begin_init return code!\n");
+            break;
+          }
+        }
+
+        char *path = NULL;
+        while(ok) {
+          jpair jp = pop();
+          jptr& j = jp.first;
+
+          if(path) free(path);
+          path = strdup(jp.second.c_str());
+
+          retries_left = 50;
+          do {
+            uw_reset(ctx);
+            uw_set_deadline(ctx, uw_time + uw_time_max);
+
+            fk = uw_begin(ctx, path);
+
+            if (fk == UNLIMITED_RETRY)
+              ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
+            else if (fk == BOUNDED_RETRY) {
+              --retries_left;
+              ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s (with delay)\n", uw_error_message(ctx));
+              sleep(1);
+              // FIXME: have to save retries_left in the job state
+              push(jp);
+            }
+            else if (fk == FATAL)
+              ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
+
+            if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
+              if (uw_rollback(ctx, 0)) {
+                ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback\n");
+                continue;
+              }
+          } while (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0));
+
+          if (fk != FATAL && fk != BOUNDED_RETRY)
+            uw_commit(ctx);
+
+        } /* while(ok) */
+
+        uw_free(ctx);
+        return NULL;
+
+      },
+      ctx);
+    }
+  }
+
+  static std::atomic<int> started;
+
+private:
+
+  static jpair pop() {
+    lock l;
+    l.wait();
+    jpair j = l.get().front();
+    l.get().pop_front();
+    return j;
+  }
+
+  static std::vector<pthread_t> threads;
+  typedef std::list<jpair> joblist;
+
+  struct lock {
+    lock() : l(m) { }
+
+    joblist& get() { return q; }
+
+    void wait() { c.wait(l, []{return q.size() > 0; }); }
+
+    static std::condition_variable c;
+
+  private:
+    std::unique_lock<std::mutex> l;
+
+    static joblist q;
+    static std::mutex m;
+  };
+};
+
+std::atomic<int> notifiers::started(0);
+std::vector<pthread_t> notifiers::threads;
+std::mutex notifiers::lock::m;
+std::condition_variable notifiers::lock::c;
+notifiers::joblist notifiers::lock::q;
+
+
+
 typedef std::map<jkey,jptr> jobmap;
 
 struct joblock {
@@ -374,6 +519,16 @@ jobmap joblock::jm;
 atomic joblock::cnt;
 
 jptr get(uw_CallbackFFI_job j) { return *((jptr*)j); }
+
+uw_Basis_unit uw_CallbackFFI_initialize(
+  struct uw_context *ctx,
+  uw_Basis_int nthread)
+{
+  if((notifiers::started++) == 0) {
+    notifiers::init(ctx,nthread);
+  }
+  return 0;
+}
 
 uw_CallbackFFI_job uw_CallbackFFI_create(
   struct uw_context *ctx,
@@ -487,6 +642,10 @@ uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job _j)
 {
+  if(notifiers::started == 0 ) {
+    uw_error(ctx, FATAL, "CallbackFFI: notifiers pool is not initialized");
+  }
+
   uw_context* ctx2 = uw_init(-1, uw_get_loggers(ctx));
   uw_set_app(ctx2, uw_get_app(ctx));
   uw_set_headers(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
@@ -527,75 +686,13 @@ uw_Basis_unit uw_CallbackFFI_run(
           fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
         }
 
-        char* path = NULL;
-
         {
           jlock _(p->j);
           if(p->j->url_completion_cb.size() > 0)
-            path = strdup(p->j->url_completion_cb.c_str());
-        }
-
-        if(path) {
-
-          int retries_left;
-          failure_kind fk;
-
-          retries_left = 5;
-          while(1) {
-            fk = uw_begin_init(ctx);
-            if (fk == SUCCESS) {
-              ls->log_debug(ls->logger_data, "Database connection initialized.\n");
-              break;
-            } else if (fk == BOUNDED_RETRY) {
-              if (retries_left) {
-                ls->log_debug(ls->logger_data, "Initialization error triggers bounded retry: %s\n", uw_error_message(ctx));
-                --retries_left;
-              } else {
-                ls->log_error(ls->logger_data, "Fatal initialization error (out of retries): %s\n", uw_error_message(ctx));
-                goto out;
-              }
-            } else if (fk == UNLIMITED_RETRY)
-              ls->log_debug(ls->logger_data, "Initialization error triggers unlimited retry: %s\n", uw_error_message(ctx));
-            else if (fk == FATAL) {
-              ls->log_error(ls->logger_data, "Fatal initialization error: %s\n", uw_error_message(ctx));
-              goto out;
-            } else {
-              ls->log_error(ls->logger_data, "Unknown uw_begin_init return code!\n");
-              goto out;
-            }
-          }
-
-          retries_left = 50;
-          do {
-            uw_reset(ctx);
-            uw_set_deadline(ctx, uw_time + uw_time_max);
-
-            fk = uw_begin(ctx, path);
-
-            if (fk == UNLIMITED_RETRY)
-              ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
-            else if (fk == BOUNDED_RETRY) {
-              --retries_left;
-              ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s (with delay)\n", uw_error_message(ctx));
-              sleep(1);
-            }
-            else if (fk == FATAL)
-              ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
-
-            if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
-              if (uw_rollback(ctx, 0)) {
-                ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback\n");
-                goto out;
-              }
-          } while (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0));
-
-          if (fk != FATAL && fk != BOUNDED_RETRY)
-            uw_commit(ctx);
+            notifiers::push(notifiers::jpair(p->j, p->j->url_completion_cb));
         }
 
       out:
-        uw_free(p->ctx);
-        if(path) free(path);
         delete p;
         return NULL;
 

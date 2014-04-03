@@ -14,6 +14,10 @@ type jobargs = {
   , Stdin : option blob
   }
 
+task initialize = fn _ =>
+  CallbackFFI.initialize 4;
+  return {}
+
 signature S = sig
   type jobref = CallbackFFI.jobref
 

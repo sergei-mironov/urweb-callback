@@ -17,6 +17,10 @@ typedef void* uw_CallbackFFI_job;
 
 typedef int uw_CallbackFFI_jobref;
 
+uw_Basis_unit uw_CallbackFFI_initialize(
+  struct uw_context *ctx,
+  uw_Basis_int nthread);
+
 uw_CallbackFFI_job uw_CallbackFFI_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
