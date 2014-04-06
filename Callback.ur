@@ -15,7 +15,7 @@ type jobargs = {
   }
 
 task initialize = fn _ =>
-  CallbackFFI.initialize 4;
+  CallbackFFI.initialize 40;
   return {}
 
 signature S = sig

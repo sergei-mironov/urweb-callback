@@ -18,14 +18,14 @@ project = do
     ur (pair "CallbackNotify.ur")
     ur (pair "CallbackNotify2.ur")
 
-  let tests = [ "test/Test1.urp"
-              , "test/Test2.urp"
-              , "test/Test3.urp"
-              , "test/Test4.urp"
-              , "test/Test5.urp"
-              , "test/Test6.urp"
-              , "test/Test8.urp"
-              , "demo/Demo.urp"
+  let tests = [ "demo/Demo.urp"
+              -- ,"test/Test1.urp"
+              -- , "test/Test2.urp"
+              -- , "test/Test3.urp"
+              -- , "test/Test4.urp"
+              -- , "test/Test5.urp"
+              -- , "test/Test6.urp"
+              -- , "test/Test8.urp"
               ]
 
   ts <- forM tests $ \t -> do

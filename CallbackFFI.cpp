@@ -372,7 +372,12 @@ struct notifiers {
 
     threads.resize(nthreads);
     for (auto i=threads.begin(); i!=threads.end(); i++) {
+
+
       pthread_create(&(*i),NULL,[](void *p_) -> void* {
+
+        fprintf(stderr, "CallbackFFI: Starting new thread\n");
+
         uw_context* ctx_ = (uw_context*) p_;
         uw_loggers *ls = uw_get_loggers(ctx_);
 
@@ -699,6 +704,7 @@ uw_Basis_unit uw_CallbackFFI_run(
       }, p_);
 
       if(ret != 0) {
+        fprintf(stderr,"CallbackFFI execute: bad state for #%d\n", p->j->key);
         p->j->exitcode = INT_MAX;
         delete p;
       }
