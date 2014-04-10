@@ -483,11 +483,11 @@ struct notifiers {
             if (fk == UNLIMITED_RETRY) {
               ls->log_debug(ls->logger_data,
                 "Error triggers unlimited retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
-              sleep(1);
+              usleep(100);
             } else if (fk == BOUNDED_RETRY) {
               ls->log_debug(ls->logger_data,
                   "Error triggers bounded retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
-              sleep(1);
+              usleep(100);
             }
             else if (fk == FATAL) {
               ls->log_error(ls->logger_data, "Fatal error: tn %d job #%d text '%s'\n", -(int)tn, j->key, uw_error_message(ctx));
