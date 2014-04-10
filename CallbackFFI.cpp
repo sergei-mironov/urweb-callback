@@ -332,7 +332,14 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       }
     }
   }
-  catch(string &e) { }
+  catch(string &e) {
+  }
+  catch(std::exception &e) {
+    r->err << "std::exception " << e.what();
+  }
+  catch(...) {
+    r->err << "C++ `...' exception";
+  }
 
   if (r->pid != -1) {
     int status;
