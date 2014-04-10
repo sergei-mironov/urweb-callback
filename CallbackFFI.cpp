@@ -378,19 +378,26 @@ struct notifiers {
   // TODO: check whether threads have started successfully or not
   static void init(uw_context* ctx, int nthreads) {
 
+    g.app = uw_get_app(ctx);
+    g.lg = uw_get_loggers(ctx);
+
     threads.resize(nthreads);
     for (auto i=threads.begin(); i!=threads.end(); i++) {
 
-
       pthread_create(&(*i),NULL,[](void *p_) -> void* {
 
+        int ret;
         fprintf(stderr, "CallbackFFI: Starting new thread\n");
 
-        uw_context* ctx_ = (uw_context*) p_;
-        uw_loggers *ls = uw_get_loggers(ctx_);
-
+        uw_loggers *ls = g.lg;
         uw_context* ctx = uw_init(-1, ls);
-        uw_set_app(ctx, uw_get_app(ctx_));
+        ret = uw_set_app(ctx, g.app);
+        if(ret != 0) {
+          fprintf(stderr, "CallbackFFI: failed to set the app (ret %d)\n", ret);
+          uw_free(ctx);
+          return NULL;
+        }
+
         uw_set_headers(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
         uw_set_env(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
 
@@ -466,14 +473,19 @@ struct notifiers {
         uw_free(ctx);
         return NULL;
 
-      },
-      ctx);
+      }, NULL);
     }
   }
 
   static std::atomic<int> started;
 
 private:
+
+  struct globals {
+    uw_app *app = NULL;
+    uw_loggers *lg = NULL;
+  } static g;
+
 
   static jpair pop() {
     lock l;
@@ -508,6 +520,7 @@ std::vector<pthread_t> notifiers::threads;
 std::mutex notifiers::lock::m;
 std::condition_variable notifiers::lock::c;
 notifiers::joblist notifiers::lock::q;
+notifiers::globals notifiers::g;
 
 
 
@@ -659,8 +672,16 @@ uw_Basis_unit uw_CallbackFFI_run(
     uw_error(ctx, FATAL, "CallbackFFI: notifiers pool is not initialized");
   }
 
+  int ret;
+
   uw_context* ctx2 = uw_init(-1, uw_get_loggers(ctx));
-  uw_set_app(ctx2, uw_get_app(ctx));
+  if(!ctx2)
+    uw_error(ctx, FATAL, "CallbackFFI: Failed to create the context");
+
+  ret = uw_set_app(ctx2, uw_get_app(ctx));
+  if(ret != 0)
+    uw_error(ctx, FATAL, "CallbackFFI: Failure in uw_set_app; ret %d", ret);
+
   uw_set_headers(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
   uw_set_env(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
 
