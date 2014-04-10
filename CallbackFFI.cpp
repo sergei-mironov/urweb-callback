@@ -126,7 +126,7 @@ struct job {
   pthread_t thread;
   bool thread_started;
 
-  mutex m;
+  std::recursive_mutex m;
 
   // Exit code. Needs mutex.
   int exitcode;
@@ -610,10 +610,12 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   {
     joblock l;
     pp = new jptr(new job(jr, cmd, stdout_sz, l.cnt));
+    get(pp)->m.lock();
   }
 
   uw_register_transactional(ctx, pp, NULL, NULL,
     [](void* pp, int) {
+      get(pp)->m.unlock();
       delete ((jptr*)pp);
     });
 
@@ -638,7 +640,6 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
   enum {ok, closed, err} ret = err;
 
   {
-    jlock _(get(j));
     if(!get(j)->close_stdin) {
       blob &buf_stdin = get(j)->buf_stdin;
       size_t oldsz = buf_stdin.size() - get(j)->sz_stdin;
@@ -675,7 +676,6 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 
 uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
-  jlock _(get(j));
   get(j)->close_stdin = true;
   if(get(j)->thread_started)
     pthread_kill(get(j)->thread, JOB_SIGNAL);
@@ -684,7 +684,6 @@ uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI
 
 uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)
 {
-  jlock _(get(j));
   if(mburl) {
     get(j)->url_completion_cb = string(mburl);
   }
@@ -696,7 +695,6 @@ uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_Callback
 
 uw_Basis_unit uw_CallbackFFI_setNotifyCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)
 {
-  jlock _(get(j));
   if(mburl) {
     get(j)->url_notify_cb = string(mburl);
   }
@@ -831,8 +829,11 @@ uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackF
   }
 
   if(pp) {
+    get(pp)->m.lock();
+
     uw_register_transactional(ctx, pp, NULL, NULL,
       [](void* pp, int) {
+        get(pp)->m.unlock();
         delete ((jptr*)pp);
       });
 
@@ -856,7 +857,6 @@ uw_CallbackFFI_job uw_CallbackFFI_deref(struct uw_context *ctx, uw_CallbackFFI_j
 
 uw_Basis_int uw_CallbackFFI_exitcode(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
-  jlock _(get(j));
   return get(j)->exitcode;
 }
 
@@ -875,7 +875,6 @@ uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job
   size_t sz = get(j)->sz_stdout;
   char* str = (char*)uw_malloc(ctx, sz + 1);
 
-  jlock _(get(j));
   memcpy(str, get(j)->buf_stdout.data(), sz);
   str[sz] = 0;
 
@@ -896,7 +895,6 @@ uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job
   size_t sz = get(j)->err.str().length();
   char* str = (char*)uw_malloc(ctx, sz + 1);
 
-  jlock _(get(j));
   memcpy(str, get(j)->err.str().c_str(), sz);
   str[sz] = 0;
 

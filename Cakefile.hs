@@ -39,6 +39,7 @@ project = do
       database ("dbname="++(takeBaseName t))
       safeGet (t.="ur") "main"
       safeGet (t.="ur") "job_monitor"
+      safeGet (t.="ur") "src_monitor"
       safeGet (t.="ur") "job_start"
       safeGet (t.="ur") "finished"
       safeGet (t.="ur") "cleanup"

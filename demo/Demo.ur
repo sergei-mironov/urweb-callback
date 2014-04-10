@@ -23,14 +23,17 @@ structure Cat = CallbackNotify2.Make(struct
 
 end)
 
-fun viewsrc (s:string) : transaction page =
+fun src_monitor jr : transaction page =
   template (
-    n <- Cat.abortMore 30;
-    jr <- Cat.create (Some (textBlob (s ^ "\n")));
     c <- Cat.monitor jr;
     return <xml>
       {c}
     </xml>)
+
+fun viewsrc (s:string) : transaction page =
+  n <- Cat.abortMore 30;
+  jr <- Cat.create (Some (textBlob (s ^ "\n")));
+  redirect (url (src_monitor jr))
 
 structure Find = CallbackNotify2.Make(struct 
 

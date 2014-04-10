@@ -32,6 +32,7 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql
 	echo 'database dbname=Demo' >> .cake3/tmp1
 	echo 'safeGet Demo/main' >> .cake3/tmp1
 	echo 'safeGet Demo/job_monitor' >> .cake3/tmp1
+	echo 'safeGet Demo/src_monitor' >> .cake3/tmp1
 	echo 'safeGet Demo/job_start' >> .cake3/tmp1
 	echo 'safeGet Demo/finished' >> .cake3/tmp1
 	echo 'safeGet Demo/cleanup' >> .cake3/tmp1
