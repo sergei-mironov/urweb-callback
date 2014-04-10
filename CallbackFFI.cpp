@@ -99,14 +99,17 @@ struct job {
     thread_started = false;
     retries_left = 50;
     counter.inc();
+    dbg = "new";
 
     int x = counter.get();
     fprintf(stderr, "Hello job #%d (cnt %d)\n", key, x);
   }
 
+  string dbg;
+
   ~job() {
     // FIXME: remove this
-    fprintf(stderr, "Bye-bye job #%d\n", key);
+    fprintf(stderr, "Bye-bye job #%d (%s)\n", key, dbg.c_str());
     counter.dec();
   }
 
@@ -462,6 +465,7 @@ struct notifiers {
         while(ok) {
           jpair jp = pop();
           jptr& j = jp.first;
+          j->dbg += ",poped";
 
           if(path) free(path);
           path = strdup(jp.second.c_str());
@@ -479,9 +483,8 @@ struct notifiers {
             if (fk == UNLIMITED_RETRY) {
               ls->log_debug(ls->logger_data,
                 "Error triggers unlimited retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
-              /* sleep(1); */
+              sleep(1);
             } else if (fk == BOUNDED_RETRY) {
-              /* retries_left--; */
               ls->log_debug(ls->logger_data,
                   "Error triggers bounded retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
               sleep(1);
@@ -490,7 +493,6 @@ struct notifiers {
               ls->log_error(ls->logger_data, "Fatal error: tn %d job #%d text '%s'\n", -(int)tn, j->key, uw_error_message(ctx));
             }
 
-            /* will_retry = (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0)); */
             will_retry = (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY ));
 
             if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
@@ -503,7 +505,8 @@ struct notifiers {
           if (fk != FATAL && fk != BOUNDED_RETRY) {
             uw_commit(ctx);
             if( uw_has_error(ctx)) {
-                ls->log_error(ls->logger_data, "Commit error for: job #%d\n", j->key);
+              ls->log_error(ls->logger_data, "Commit error for: job #%d\n", j->key);
+              push(jp);
             }
           }
 
@@ -528,7 +531,8 @@ private:
 
   static jpair pop() {
     lock l;
-    l.wait();
+    if(l.get().size() == 0)
+      l.wait();
     jpair j = l.get().front();
     l.get().pop_front();
     return j;
@@ -583,7 +587,7 @@ jobmap joblock::jm;
 atomic_cnt joblock::cnt;
 
 
-jptr get(uw_CallbackFFI_job j) { return *((jptr*)j); }
+jptr get(void* j) { return *((jptr*)j); }
 
 uw_Basis_unit uw_CallbackFFI_initialize(
   struct uw_context *ctx,
@@ -601,29 +605,28 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   uw_Basis_int stdout_sz,
   uw_Basis_int jr)
 {
-  joblock l;
-  jobmap& js(l.get());
-  jptr j(new job(jr,
-                 cmd,
-                 stdout_sz,
-                 l.cnt));
+  jptr* pp;
 
-  js.insert(js.end(), jobmap::value_type(j->key, j));
+  {
+    joblock l;
+    pp = new jptr(new job(jr, cmd, stdout_sz, l.cnt));
+  }
 
-  jptr* pp = new jptr(j);
-  uw_register_transactional(ctx, pp, NULL,
-    [] (void *pp) {
-      joblock l;
-      jobmap &js(l.get());
-
-      auto i = js.find(get(pp)->key);
-      if (i != js.end()) {
-        js.erase(i);
-      }
-    },
+  uw_register_transactional(ctx, pp, NULL, NULL,
     [](void* pp, int) {
       delete ((jptr*)pp);
     });
+
+  uw_register_transactional(ctx, pp,
+    [] (void *j_) {
+      joblock l;
+      jobmap& js(l.get());
+      jptr j = get(j_);
+      j->dbg = "inmap";
+      js.insert(js.end(), jobmap::value_type(j->key, j));
+    },
+    NULL, NULL);
+
   return pp;
 }
 
@@ -703,6 +706,14 @@ uw_Basis_unit uw_CallbackFFI_setNotifyCB(struct uw_context *ctx, uw_CallbackFFI_
   return 0;
 }
 
+struct pack {
+  pack(jptr j_, uw_loggers *lg_):j(j_),lg(lg_) {}
+  pack(const pack &p) : j(p.j), lg(p.lg) {}
+
+  jptr j;
+  uw_loggers *lg;
+};
+
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job _j)
@@ -711,17 +722,26 @@ uw_Basis_unit uw_CallbackFFI_run(
     uw_error(ctx, FATAL, "CallbackFFI: notifiers pool is not initialized");
   }
 
-  struct pack { jptr j; uw_loggers *lg; };
+  pack *p = new pack(get(_j), uw_get_loggers(ctx));
 
-  pack *p = new pack {get(_j), uw_get_loggers(ctx)};
+  p->j->dbg += ",run1";
+
+  uw_register_transactional(ctx, p, NULL, NULL,
+    [](void* p_, int) {
+      delete (pack*)p_;
+    });
 
   uw_register_transactional(ctx, p,
     [](void* p_) {
-      pack* p = (pack*)p_;
+      pack* p = new pack(*(pack*)p_);
       int ret;
       
+      p->j->dbg += ",run2";
+
       ret = pthread_create(&p->j->thread, NULL, [](void *p_) -> void* {
         pack* p = (pack*)p_;
+
+        p->j->dbg += ",run3";
 
         struct sigaction s;
         memset(&s, 0, sizeof(struct sigaction));
@@ -746,15 +766,15 @@ uw_Basis_unit uw_CallbackFFI_run(
 
         {
           jlock _(p->j);
-          if(p->j->url_completion_cb.size() > 0)
+          if(p->j->url_completion_cb.size() > 0) {
             notifiers::push(notifiers::jpair(p->j, p->j->url_completion_cb));
+          }
         }
 
-      out:
         delete p;
         return NULL;
 
-      }, p_);
+      }, p);
 
       if(ret != 0) {
         fprintf(stderr,"CallbackFFI execute: bad state for #%d\n", p->j->key);
@@ -763,20 +783,20 @@ uw_Basis_unit uw_CallbackFFI_run(
       }
     }, NULL, NULL);
 
-  uw_register_transactional(ctx, p, NULL, [](void *p_) {
-      pack* p = (pack*)p_;
-      delete p;
-    }, NULL);
-
   return 0;
 }
 
 uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j_)
 {
-  uw_CallbackFFI_job j = new jptr(get(j_));
+  void* j = new jptr(get(j_));
+
+  uw_register_transactional(ctx, j, NULL, NULL,
+    [](void* j_, int) {
+      delete ((jptr*)j_);
+    });
 
   uw_register_transactional(ctx, j,
-    [](uw_CallbackFFI_job j_) {
+    [](void* j_) {
       jptr j = get(j_);
       joblock l;
       jobmap &js(l.get());
@@ -785,21 +805,19 @@ uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job 
       if (i != js.end()) {
         js.erase(i);
         fprintf(stderr, "Removing job #%d\n", j->key);
+        j->dbg += ",cln";
       }
       else {
         assert(false);
       }
-      delete ((jptr*)j_);
+    }, NULL , NULL);
 
-    }, [](uw_CallbackFFI_job j_) {
-      delete ((jptr*)j_);
-    }, NULL);
   return 0;
 }
 
 uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackFFI_jobref k)
 {
-  uw_CallbackFFI_job pp = NULL;
+  void* pp = NULL;
 
   {
     joblock l;
@@ -813,7 +831,11 @@ uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackF
   }
 
   if(pp) {
-    uw_register_transactional(ctx, pp, NULL, NULL, [](void* pp, int) {delete ((jptr*)pp);});
+    uw_register_transactional(ctx, pp, NULL, NULL,
+      [](void* pp, int) {
+        delete ((jptr*)pp);
+      });
+
     uw_CallbackFFI_job* pp2 = (uw_CallbackFFI_job*)uw_malloc(ctx, sizeof(uw_CallbackFFI_job*));
     *pp2 = pp;
     return pp2;
