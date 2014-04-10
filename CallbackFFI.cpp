@@ -352,6 +352,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
   }
 
   UW_SYSTEM_PIPE_CLOSE(cmd_to_ur);
+  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur2);
   UW_SYSTEM_PIPE_CLOSE(ur_to_cmd);
 }
 /*}}}*/
