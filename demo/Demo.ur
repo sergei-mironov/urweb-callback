@@ -59,4 +59,10 @@ fun main {} : transaction page = template (
       <a link={job_start {}}>Start the job</a>
     </xml>)
 
+fun status {} : transaction page =
+  n <- Find.abortMore 0;
+  return <xml>
+    Jobs : {[n]}
+    </xml>
+
 

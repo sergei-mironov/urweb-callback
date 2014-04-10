@@ -48,6 +48,7 @@ project = do
       safeGet (t.="ur") "Find/C/callback"
       safeGet (t.="ur") "Cat/C/callback"
       safeGet (t.="ur") "viewsrc"
+      safeGet (t.="ur") "status"
       sql (t.="sql")
       library l
       debug

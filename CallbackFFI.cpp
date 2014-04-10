@@ -25,6 +25,7 @@ extern "C" {
 #include <sstream>
 #include <list>
 #include <vector>
+#include <cassert>
 #include <algorithm>
 #include <mutex>
 #include <condition_variable>
@@ -67,9 +68,28 @@ typedef std::mutex mutex;
 typedef std::atomic<int> atomic;
 typedef long int jkey;
 
+struct atomic_cnt {
+  atomic_cnt() :cnt(0) {}
+
+  void inc() { m.lock(); cnt++; m.unlock(); }
+  void dec() { m.lock(); cnt--; m.unlock(); }
+  int get() {
+    m.lock();
+    int x = cnt;
+    m.unlock();
+    return x;
+  }
+
+private:
+  int cnt;
+  mutex m;
+};
 
 struct job {
-  job(jkey _key, const string &_cmd, int _bufsize, atomic& counter_) :
+
+  friend struct notifiers;
+
+  job(jkey _key, const string &_cmd, int _bufsize, atomic_cnt& counter_) :
 		  key(_key), cmd(_cmd), counter(counter_) {
     buf_stdout.resize(_bufsize);
     sz_stdout = 0;
@@ -77,16 +97,17 @@ struct job {
     exitcode = -1;
     close_stdin = false;
     thread_started = false;
-    counter++;
+    retries_left = 50;
+    counter.inc();
 
-    int x = counter;
+    int x = counter.get();
     fprintf(stderr, "Hello job #%d (cnt %d)\n", key, x);
   }
 
   ~job() {
     // FIXME: remove this
     fprintf(stderr, "Bye-bye job #%d\n", key);
-    counter--;
+    counter.dec();
   }
 
   jkey key;
@@ -131,9 +152,12 @@ struct job {
     throw err.str();
   }
 
+
 private:
 
-  atomic& counter;
+  int retries_left;
+
+  atomic_cnt& counter;
 };
 
 typedef std::shared_ptr<job> jptr;
@@ -381,16 +405,18 @@ struct notifiers {
     g.app = uw_get_app(ctx);
     g.lg = uw_get_loggers(ctx);
 
+    size_t tn = 1;
     threads.resize(nthreads);
-    for (auto i=threads.begin(); i!=threads.end(); i++) {
+    for (auto i=threads.begin(); i!=threads.end(); i++,tn++) {
 
-      pthread_create(&(*i),NULL,[](void *p_) -> void* {
+      pthread_create(&(*i),NULL,[](void *tn_) -> void* {
 
+        size_t tn = (size_t)tn_;
         int ret;
         fprintf(stderr, "CallbackFFI: Starting new thread\n");
 
         uw_loggers *ls = g.lg;
-        uw_context* ctx = uw_init(-1, ls);
+        uw_context* ctx = uw_init(-(int)tn, ls);
         ret = uw_set_app(ctx, g.app);
         if(ret != 0) {
           fprintf(stderr, "CallbackFFI: failed to set the app (ret %d)\n", ret);
@@ -402,10 +428,10 @@ struct notifiers {
         uw_set_env(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
 
         bool ok = false;
-        int retries_left;
-        failure_kind fk;
 
-        retries_left = 5;
+        {
+        failure_kind fk;
+        int retries_left = 5;
         while(1) {
           fk = uw_begin_init(ctx);
           if (fk == SUCCESS) {
@@ -430,6 +456,7 @@ struct notifiers {
             break;
           }
         }
+        }
 
         char *path = NULL;
         while(ok) {
@@ -439,41 +466,53 @@ struct notifiers {
           if(path) free(path);
           path = strdup(jp.second.c_str());
 
-          retries_left = 50;
+          /* int retries_left = 50; */
+          int will_retry = 0;
+          failure_kind fk;
+
           do {
             uw_reset(ctx);
             uw_set_deadline(ctx, uw_time + uw_time_max);
 
             fk = uw_begin(ctx, path);
 
-            if (fk == UNLIMITED_RETRY)
-              ls->log_debug(ls->logger_data, "Error triggers unlimited retry in loopback: %s\n", uw_error_message(ctx));
-            else if (fk == BOUNDED_RETRY) {
-              --retries_left;
-              ls->log_debug(ls->logger_data, "Error triggers bounded retry in loopback: %s (with delay)\n", uw_error_message(ctx));
+            if (fk == UNLIMITED_RETRY) {
+              ls->log_debug(ls->logger_data,
+                "Error triggers unlimited retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
+              /* sleep(1); */
+            } else if (fk == BOUNDED_RETRY) {
+              /* retries_left--; */
+              ls->log_debug(ls->logger_data,
+                  "Error triggers bounded retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
               sleep(1);
-              // FIXME: have to save retries_left in the job state
-              push(jp);
             }
-            else if (fk == FATAL)
-              ls->log_error(ls->logger_data, "Fatal error: %s\n", uw_error_message(ctx));
+            else if (fk == FATAL) {
+              ls->log_error(ls->logger_data, "Fatal error: tn %d job #%d text '%s'\n", -(int)tn, j->key, uw_error_message(ctx));
+            }
+
+            /* will_retry = (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0)); */
+            will_retry = (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY ));
 
             if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
-              if (uw_rollback(ctx, 0)) {
-                ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback\n");
+              if (uw_rollback(ctx, will_retry)) {
+                ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback: job #%d\n", j->key);
                 continue;
               }
-          } while (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY && retries_left > 0));
+          } while (will_retry);
 
-          if (fk != FATAL && fk != BOUNDED_RETRY)
+          if (fk != FATAL && fk != BOUNDED_RETRY) {
             uw_commit(ctx);
+            if( uw_has_error(ctx)) {
+                ls->log_error(ls->logger_data, "Commit error for: job #%d\n", j->key);
+            }
+          }
 
         } /* while(ok) */
 
         uw_free(ctx);
         return NULL;
 
-      }, NULL);
+      }, (void*)tn);
     }
   }
 
@@ -533,8 +572,7 @@ struct joblock {
   jobmap& get() { return jm; }
   jobmap& operator& () { return jm; } 
 
-  static atomic cnt;
-
+  static atomic_cnt cnt;
 private:
   static jobmap jm;
   static mutex m;
@@ -542,7 +580,8 @@ private:
 
 mutex joblock::m;
 jobmap joblock::jm;
-atomic joblock::cnt;
+atomic_cnt joblock::cnt;
+
 
 jptr get(uw_CallbackFFI_job j) { return *((jptr*)j); }
 
@@ -672,32 +711,17 @@ uw_Basis_unit uw_CallbackFFI_run(
     uw_error(ctx, FATAL, "CallbackFFI: notifiers pool is not initialized");
   }
 
-  int ret;
+  struct pack { jptr j; uw_loggers *lg; };
 
-  uw_context* ctx2 = uw_init(-1, uw_get_loggers(ctx));
-  if(!ctx2)
-    uw_error(ctx, FATAL, "CallbackFFI: Failed to create the context");
+  pack *p = new pack {get(_j), uw_get_loggers(ctx)};
 
-  ret = uw_set_app(ctx2, uw_get_app(ctx));
-  if(ret != 0)
-    uw_error(ctx, FATAL, "CallbackFFI: Failure in uw_set_app; ret %d", ret);
-
-  uw_set_headers(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
-  uw_set_env(ctx2, [](void*, const char*)->char*{return NULL;}, NULL);
-
-  struct pack { jptr j; uw_context *ctx; };
-
-  uw_register_transactional(ctx,
-    new pack {get(_j), ctx2},
+  uw_register_transactional(ctx, p,
     [](void* p_) {
       pack* p = (pack*)p_;
       int ret;
       
       ret = pthread_create(&p->j->thread, NULL, [](void *p_) -> void* {
         pack* p = (pack*)p_;
-
-        uw_context *ctx = p->ctx;
-        uw_loggers *ls = uw_get_loggers(p->ctx);
 
         struct sigaction s;
         memset(&s, 0, sizeof(struct sigaction));
@@ -714,7 +738,7 @@ uw_Basis_unit uw_CallbackFFI_run(
         p->j->thread_started = true;
 
         try {
-          execute(p->j, ls, &oldss);
+          execute(p->j, p->lg, &oldss);
         }
         catch(job::exception &e) {
           fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
@@ -737,31 +761,39 @@ uw_Basis_unit uw_CallbackFFI_run(
         p->j->exitcode = INT_MAX;
         delete p;
       }
-    },
+    }, NULL, NULL);
 
-    [](void *p_) {
+  uw_register_transactional(ctx, p, NULL, [](void *p_) {
       pack* p = (pack*)p_;
       delete p;
-    },
-
-    [](void *p, int x) {
-    });
+    }, NULL);
 
   return 0;
 }
 
-uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j)
+uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j_)
 {
+  uw_CallbackFFI_job j = new jptr(get(j_));
+
   uw_register_transactional(ctx, j,
-    [](uw_CallbackFFI_job j) {
+    [](uw_CallbackFFI_job j_) {
+      jptr j = get(j_);
       joblock l;
       jobmap &js(l.get());
 
-      auto i = js.find(get(j)->key);
+      auto i = js.find(j->key);
       if (i != js.end()) {
         js.erase(i);
+        fprintf(stderr, "Removing job #%d\n", j->key);
       }
-    }, NULL, NULL);
+      else {
+        assert(false);
+      }
+      delete ((jptr*)j_);
+
+    }, [](uw_CallbackFFI_job j_) {
+      delete ((jptr*)j_);
+    }, NULL);
   return 0;
 }
 
@@ -907,7 +939,7 @@ uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx, uw_Basis_unit u)
 {
   int x;
   {joblock l;
-    x = l.cnt;
+    x = l.cnt.get();
   }
   return x;
 }

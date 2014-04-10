@@ -15,7 +15,7 @@ type jobargs = {
   }
 
 task initialize = fn _ =>
-  CallbackFFI.initialize 40;
+  CallbackFFI.initialize 4;
   return {}
 
 signature S = sig
@@ -62,7 +62,7 @@ struct
     mji <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
     case mji of
       |None =>
-        CallbackFFI.forceBoundedRetry ("Force bounded retry for job " ^ (show jr));
+        CallbackFFI.forceBoundedRetry ("Force bounded retry for job #" ^ (show jr));
         return <xml/>
       |Some ji =>
         dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND ExitCode <> NULL);
@@ -123,9 +123,12 @@ struct
 
   val abortMore limit =
     n <- CallbackFFI.nactive {};
-    case n > limit of
-      |False => return n
-      |True => error (<xml>Active jobs limit exceeded: active {[n]} limit {[limit]}</xml>)
+    case limit of
+      |0 => return n
+      |_ =>
+        (case n > limit of
+          |False => return n
+          |True => error (<xml>Active jobs limit exceeded: active {[n]} limit {[limit]}</xml>))
 
 end
 

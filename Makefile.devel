@@ -41,6 +41,7 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql
 	echo 'safeGet Demo/Find/C/callback' >> .cake3/tmp1
 	echo 'safeGet Demo/Cat/C/callback' >> .cake3/tmp1
 	echo 'safeGet Demo/viewsrc' >> .cake3/tmp1
+	echo 'safeGet Demo/status' >> .cake3/tmp1
 	echo 'sql .././demo/Demo.sql' >> .cake3/tmp1
 	echo 'library ../.' >> .cake3/tmp1
 	echo 'debug' >> .cake3/tmp1
