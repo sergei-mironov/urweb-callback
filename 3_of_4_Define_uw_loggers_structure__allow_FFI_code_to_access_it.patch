@@ -2,8 +2,8 @@
 # User Sergey Mironov <grrwlf@gmail.com>
 # Date 1393402912 0
 #      Wed Feb 26 08:21:52 2014 +0000
-# Node ID a147ae7b4293171c7bd4b2877ef22fae552a138c
-# Parent  0b64990a384ef5816b55e80f04d787c7f3b1fd6d
+# Node ID bc4f0f329d75e6b1a216834d05cb17b67dfd86a0
+# Parent  5cf2c375997a20a477291217a6814f1bf9b745cf
 Define uw_loggers structure, allow FFI code to access it
 
 diff --git a/include/urweb/request.h b/include/urweb/request.h
@@ -393,7 +393,7 @@ diff --git a/src/c/urweb.c b/src/c/urweb.c
  void uw_free(uw_context ctx) {
    size_t i;
  
-@@ -4103,8 +4106,8 @@
+@@ -4118,8 +4121,8 @@
  }
  
  uw_Basis_unit uw_Basis_debug(uw_context ctx, uw_Basis_string s) {

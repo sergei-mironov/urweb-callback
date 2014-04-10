@@ -2,8 +2,8 @@
 # User Sergey Mironov <grrwlf@gmail.com>
 # Date 1393233031 0
 #      Mon Feb 24 09:10:31 2014 +0000
-# Node ID 0b64990a384ef5816b55e80f04d787c7f3b1fd6d
-# Parent  7db8356caef57b0572d34bdd16629ef7a53ee848
+# Node ID 78eefe744197089f5858a268c4bcb090664a2209
+# Parent  7075acda4456216360b7107f915dd41880778c4a
 Add <pre> tag support
 
 diff --git a/lib/ur/basis.urs b/lib/ur/basis.urs
