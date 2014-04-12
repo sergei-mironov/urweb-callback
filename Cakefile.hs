@@ -18,7 +18,7 @@ project = do
     ur (pair "CallbackNotify.ur")
     ur (pair "CallbackNotify2.ur")
 
-  let tests = [ "demo/Demo.urp"
+  let tests = [ "test/Stress.urp"
               , "test/Test1.urp"
               , "test/Test2.urp"
               , "test/Test3.urp"
