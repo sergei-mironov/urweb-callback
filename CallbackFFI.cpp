@@ -366,13 +366,50 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 /*}}}*/
 
 
-struct notifiers {
+class notifiers {
 
   typedef std::pair<jptr, string> jpair;
 
-  static void push(jpair j) {
+  struct globals {
+    uw_app *app = NULL;
+    uw_loggers *lg = NULL;
+  } static g;
+
+  static jpair pop() {
     lock l;
-    l.get().push_back(j);
+    if(l.get().size() == 0)
+      l.wait();
+    jpair j = l.get().front();
+    l.get().pop_front();
+    return j;
+  }
+
+  static std::vector<pthread_t> threads;
+  typedef std::list<jpair> joblist;
+
+  struct lock {
+    lock() : l(m) { }
+
+    joblist& get() { return q; }
+
+    void wait() { c.wait(l, []{return q.size() > 0; }); }
+
+    static std::condition_variable c;
+
+  private:
+    std::unique_lock<std::mutex> l;
+
+    static joblist q;
+    static std::mutex m;
+  };
+
+public:
+
+  static std::atomic<int> started;
+
+  static void push(const jptr &j) {
+    lock l;
+    l.get().push_back(jpair(j, j->url_completion_cb));
     l.c.notify_one();
   }
 
@@ -479,7 +516,7 @@ struct notifiers {
             uw_commit(ctx);
             if( uw_has_error(ctx)) {
               ls->log_error(ls->logger_data, "Commit error for: job #%d\n", j->key);
-              push(jp);
+              push(j);
             }
           }
 
@@ -491,44 +528,6 @@ struct notifiers {
       }, (void*)tn);
     }
   }
-
-  static std::atomic<int> started;
-
-private:
-
-  struct globals {
-    uw_app *app = NULL;
-    uw_loggers *lg = NULL;
-  } static g;
-
-
-  static jpair pop() {
-    lock l;
-    if(l.get().size() == 0)
-      l.wait();
-    jpair j = l.get().front();
-    l.get().pop_front();
-    return j;
-  }
-
-  static std::vector<pthread_t> threads;
-  typedef std::list<jpair> joblist;
-
-  struct lock {
-    lock() : l(m) { }
-
-    joblist& get() { return q; }
-
-    void wait() { c.wait(l, []{return q.size() > 0; }); }
-
-    static std::condition_variable c;
-
-  private:
-    std::unique_lock<std::mutex> l;
-
-    static joblist q;
-    static std::mutex m;
-  };
 };
 
 std::atomic<int> notifiers::started(0);
@@ -764,7 +763,7 @@ uw_Basis_unit uw_CallbackFFI_run(
         {
           jlock _(p->j);
           if(p->j->url_completion_cb.size() > 0) {
-            notifiers::push(notifiers::jpair(p->j, p->j->url_completion_cb));
+            notifiers::push(p->j);
           }
         }
 
