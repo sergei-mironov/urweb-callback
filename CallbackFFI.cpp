@@ -539,23 +539,56 @@ notifiers::joblist notifiers::lock::q;
 notifiers::globals notifiers::g;
 
 
+class jobset {
 
-typedef std::map<jkey,jptr> jobmap;
+  typedef std::map< jkey, std::list<jptr> > jobmap;
 
-struct joblock {
-  joblock() { m.lock(); }
-  ~joblock() { m.unlock(); }
-
-  jobmap& get() { return jm; }
-  jobmap& operator& () { return jm; } 
-
-private:
   static jobmap jm;
-  static mutex m;
+  static std::mutex m;
+
+public:
+  jobset() { m.lock(); }
+  ~jobset() { m.unlock(); }
+
+  void insert(const jptr &j) {
+    auto i = jm.find(j->key);
+    if (i != jm.end()) {
+      i->second.push_back(j);
+      fprintf(stderr, "jobset: inserting #%d (nonempty)\n", j->key);
+    }
+    else {
+      std::list<jptr> l;
+      l.push_back(j);
+      jm.insert(jm.end(), jobmap::value_type(j->key, l));
+      fprintf(stderr, "jobset: inserting #%d\n", j->key);
+    }
+  }
+
+  void remove(const jptr &j) {
+    auto i = jm.find(j->key);
+    if (i != jm.end()) {
+      i->second.pop_front();
+      if(i->second.size() == 0) {
+        jm.erase(i);
+        fprintf(stderr, "jobset: removing #%d (finally)\n", j->key);
+      }
+      else {
+        fprintf(stderr, "jobset: removing #%d\n", j->key);
+      }
+    }
+  }
+
+  jptr find(int key) {
+    auto i = jm.find(key);
+    if (i != jm.end())
+      return i->second.front();
+    else
+      return jptr();
+  }
 };
 
-mutex joblock::m;
-jobmap joblock::jm;
+mutex jobset::m;
+jobset::jobmap jobset::jm;
 
 
 jptr get(void* j) { return *((jptr*)j); }
@@ -579,24 +612,25 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   jptr* pp;
 
   {
-    joblock l;
     pp = new jptr(new job(jr, cmd, stdout_sz));
     get(pp)->m.lock();
+
+    jobset s;
+    s.insert(get(pp));
   }
 
   uw_register_transactional(ctx, pp, NULL, NULL,
     [](void* pp, int) {
+      jobset s;
+      s.remove(get(pp));
       get(pp)->m.unlock();
       delete ((jptr*)pp);
     });
 
   uw_register_transactional(ctx, pp,
-    [] (void *j_) {
-      joblock l;
-      jobmap& js(l.get());
-      jptr j = get(j_);
-      fprintf(stderr, "Inserting job #%d\n", j->key);
-      js.insert(js.end(), jobmap::value_type(j->key, j));
+    [] (void *pp) {
+      jobset s;
+      s.insert(get(pp));
     },
     NULL, NULL);
 
@@ -693,7 +727,6 @@ uw_Basis_unit uw_CallbackFFI_run(
 
   pack *p = new pack(get(_j), uw_get_loggers(ctx));
 
-
   uw_register_transactional(ctx, p, NULL, NULL,
     [](void* p_, int) {
       delete (pack*)p_;
@@ -703,11 +736,9 @@ uw_Basis_unit uw_CallbackFFI_run(
     [](void* p_) {
       pack* p = new pack(*(pack*)p_);
       int ret;
-      
 
       ret = pthread_create(&p->j->thread, NULL, [](void *p_) -> void* {
         pack* p = (pack*)p_;
-
 
         struct sigaction s;
         memset(&s, 0, sizeof(struct sigaction));
@@ -763,18 +794,8 @@ uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job 
 
   uw_register_transactional(ctx, j,
     [](void* j_) {
-      jptr j = get(j_);
-      joblock l;
-      jobmap &js(l.get());
-
-      auto i = js.find(j->key);
-      if (i != js.end()) {
-        js.erase(i);
-        fprintf(stderr, "Removing job #%d\n", j->key);
-      }
-      else {
-        assert(false);
-      }
+      jobset s;
+      s.remove(get(j_));
     }, NULL , NULL);
 
   return 0;
@@ -785,14 +806,10 @@ uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackF
   void* pp = NULL;
 
   {
-    joblock l;
-    jobmap& js(l.get());
-
-    fprintf(stderr, "Searching for job #%d\n", k);
-
-    jobmap::iterator j = js.find(k);
-    if (j != js.end())
-      pp = new jptr(j->second);
+    jobset s;
+    jptr j = s.find(k);
+    if (j)
+      pp = new jptr(j);
     else
       pp = NULL;
   }
