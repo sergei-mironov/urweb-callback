@@ -33,10 +33,10 @@ extern "C" {
 #include <climits>
 
 
-#define dprintf printf
-
 /* 0,1 are pipe ids, 2,3 is zero if pipe is closed */
 typedef int uw_System_pipe[4];
+
+#define dprintf(t, args...) do { if(getenv("UWCB_DEBUG")) fprintf(stderr, t, ##args); } while(0)
 
 #define JOB_SIGNAL SIGUSR1
 
@@ -83,12 +83,11 @@ struct job {
     close_stdin = false;
     thread_started = false;
 
-    fprintf(stderr, "Hello job #%d (cnt %d)\n", key, int(njobs++));
+    dprintf("Hello job #%d (cnt %d)\n", key, int(njobs++));
   }
 
   ~job() {
-    // FIXME: remove this
-    fprintf(stderr, "Bye-bye job #%d (cnt %d)\n", key, int(--njobs));
+    dprintf("Bye-bye job #%d (cnt %d)\n", key, int(--njobs));
   }
 
   jkey key;
@@ -427,13 +426,14 @@ public:
 
         size_t tn = (size_t)tn_;
         int ret;
-        fprintf(stderr, "CallbackFFI: Starting new thread\n");
-
         uw_loggers *ls = g.lg;
+
+        ls->log_debug(ls->logger_data, "CallbackFFI: Starting new thread\n");
+
         uw_context* ctx = uw_init(-(int)tn, ls);
         ret = uw_set_app(ctx, g.app);
         if(ret != 0) {
-          fprintf(stderr, "CallbackFFI: failed to set the app (ret %d)\n", ret);
+          ls->log_error(ls->logger_data, "CallbackFFI: failed to set the app (ret %d)\n", ret);
           uw_free(ctx);
           return NULL;
         }
@@ -553,13 +553,13 @@ public:
     auto i = jm.find(j->key);
     if (i != jm.end()) {
       i->second.push_back(j);
-      fprintf(stderr, "jobset: inserting #%d (nonempty)\n", j->key);
+      dprintf("jobset: inserting #%d (nonempty)\n", j->key);
     }
     else {
       std::list<jptr> l;
       l.push_back(j);
       jm.insert(jm.end(), jobmap::value_type(j->key, l));
-      fprintf(stderr, "jobset: inserting #%d\n", j->key);
+      dprintf("jobset: inserting #%d\n", j->key);
     }
   }
 
@@ -569,10 +569,10 @@ public:
       i->second.pop_front();
       if(i->second.size() == 0) {
         jm.erase(i);
-        fprintf(stderr, "jobset: removing #%d (finally)\n", j->key);
+        dprintf("jobset: removing #%d (finally)\n", j->key);
       }
       else {
-        fprintf(stderr, "jobset: removing #%d\n", j->key);
+        dprintf("jobset: removing #%d\n", j->key);
       }
     }
   }
@@ -757,7 +757,7 @@ uw_Basis_unit uw_CallbackFFI_run(
           execute(p->j, p->lg, &oldss);
         }
         catch(job::exception &e) {
-          fprintf(stderr,"CallbackFFI execute: %s\n", e.c_str());
+          dprintf("CallbackFFI execute: %s\n", e.c_str());
         }
 
         {
@@ -773,7 +773,7 @@ uw_Basis_unit uw_CallbackFFI_run(
       }, p);
 
       if(ret != 0) {
-        fprintf(stderr,"CallbackFFI execute: bad state for #%d\n", p->j->key);
+        dprintf("CallbackFFI execute: bad state for #%d\n", p->j->key);
         p->j->exitcode = INT_MAX;
         delete p;
       }
@@ -928,7 +928,7 @@ uw_CallbackFFI_job uw_CallbackFFI_runNow(
     execute(get(j), uw_get_loggers(ctx), NULL);
   }
   catch(job::exception &e) {
-    fprintf(stderr,"CallbackFFI::runNow error: %s\n", e.c_str());
+    dprintf("CallbackFFI::runNow error: %s\n", e.c_str());
   }
 
   return j;
