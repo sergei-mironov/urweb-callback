@@ -39,7 +39,7 @@ and job_monitor (jr:C.jobref) : transaction page = template (
     </div>
   </xml>)
 
-val ja = { Cmd = "cat" , Stdin = Some (textBlob "Hello, kitty\n") }
+val ja = { Cmd = "cat" , Stdin = Some (textBlob "Hello, kitty\n"), Args = "aaaa"::[] }
 
 fun job_start {} : transaction page =
   jr <- C.nextjob {};

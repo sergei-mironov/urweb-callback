@@ -116,6 +116,8 @@ struct job {
   blob buf_stdout;
   blob buf_stdin;
 
+  std::vector<string> args;
+
   // Infrastructure errors (not stderr). Needs mutex.
   oss err;
 
@@ -197,13 +199,33 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       dup(cmd_to_ur2[1]);
       close(cmd_to_ur2[1]);
 
-      /* run command using /bin/sh shell - is there a shorter way to do this? */
-      char * argv[3];
-      argv[0] = (char*) "/bin/sh";
-      argv[1] = (char*) "-c";
-      argv[2] = (char*) r->cmd.c_str();
-      argv[3] = NULL;
-      execv("/bin/sh", argv);
+      if(r->args.size() == 0) {
+        /* The Insecure way */
+        char * argv[3];
+        argv[0] = (char*) "/bin/sh";
+        argv[1] = (char*) "-c";
+        argv[2] = (char*) r->cmd.c_str();
+        argv[3] = NULL;
+        for(int i=0; i<3; i++)
+          dprintf("arg[%d]: %s\n", i, argv[i]);
+        execv("/bin/sh", argv);
+      }
+      else {
+        /* The Secure way */
+        char* cmd = (char*) r->cmd.c_str();
+        char** argv = new char* [r->args.size() + 2];
+        int argc = 0;
+        argv[argc++] = cmd;
+        dprintf("arg[0]: %s\n", cmd);
+        for(int i=0; i<r->args.size(); i++, argc++) {
+          argv[argc] = (char*)r->args[i].c_str();
+          dprintf("arg[%d]: %s\n", argc, argv[argc]);
+        }
+        argv[argc] = NULL;
+        execv(cmd, argv);
+      }
+      fprintf(stderr, "execv '%s': %m\n", r->cmd.c_str());
+      exit(1);
     }
     else {
       /* parent */
@@ -684,6 +706,11 @@ uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI
   if(get(j)->thread_started)
     pthread_kill(get(j)->thread, JOB_SIGNAL);
   return 0;
+}
+
+uw_Basis_unit uw_CallbackFFI_pushArg(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string arg)
+{
+  get(j)->args.push_back(arg); 
 }
 
 uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)

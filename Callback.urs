@@ -12,6 +12,7 @@ table jobs : $jobrec
 type jobargs = {
     Cmd : string
   , Stdin : option blob
+  , Args : list string
   }
 
 signature S = sig

@@ -12,11 +12,14 @@ table jobs : $jobrec
 type jobargs = {
     Cmd : string
   , Stdin : option blob
+  , Args : list string
   }
 
 task initialize = fn _ =>
   CallbackFFI.initialize 4;
   return {}
+
+fun mapM_ a b = i <- List.mapM a b; return {}
 
 signature S = sig
   type jobref = CallbackFFI.jobref
@@ -87,6 +90,7 @@ struct
     (case ja.Stdin of
      |Some i => CallbackFFI.pushStdin j i (blobSize i)
      |None => return {});
+    mapM_ (CallbackFFI.pushArg j) ja.Args;
     CallbackFFI.run j;
     return {}
 

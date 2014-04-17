@@ -14,6 +14,7 @@ project = do
     csrc' "CallbackFFI.cpp" "-std=c++11" "-lstdc++"
     safeGet "Callback.ur" "Default/callback"
     safeGet "CallbackNotify.ur" "C/callback"
+    ur (sys "list")
     ur (pair "Callback.ur")
     ur (pair "CallbackNotify.ur")
     ur (pair "CallbackNotify2.ur")

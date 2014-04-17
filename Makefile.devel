@@ -320,6 +320,7 @@ all: ./Makefile.devel ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./tes
 	echo 'safeGet Callback/Default/callback' >> .cake3/tmp0
 	echo 'safeGet CallbackNotify/C/callback' >> .cake3/tmp0
 	echo '' >> .cake3/tmp0
+	echo '$$/list' >> .cake3/tmp0
 	echo './Callback' >> .cake3/tmp0
 	echo './CallbackNotify' >> .cake3/tmp0
 	echo './CallbackNotify2' >> .cake3/tmp0

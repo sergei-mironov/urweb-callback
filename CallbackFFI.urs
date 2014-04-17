@@ -10,6 +10,7 @@ val setCompletionCB : job -> option url -> transaction unit
 val setNotifyCB : job -> option url -> transaction unit
 val pushStdin : job -> blob -> int -> transaction unit
 val pushStdinEOF : job -> transaction unit
+val pushArg : job -> string -> transaction unit
 val run: job -> transaction unit
 val cleanup: job -> transaction unit
 
