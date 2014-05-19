@@ -58,7 +58,33 @@ project = do
       ur (sys "string")
       ur (pair (t.="ur"))
 
-  dbs <- forM ts $ \t -> rule $ do
+
+  d <- uwapp "-dbms postgres" "demo/Demo.urp" $ do
+    let demo = "demo/Demo.ur"
+    allow url "http://code.jquery.com/ui/1.10.3/jquery-ui.js";
+    allow mime "text/javascript";
+    allow mime "text/css";
+    allow mime "image/jpeg";
+    allow mime "image/png";
+    allow mime "image/gif";
+    database ("dbname="++(takeBaseName demo))
+    safeGet demo "main"
+    safeGet demo "job_monitor"
+    safeGet demo "src_monitor"
+    safeGet demo "job_start"
+    safeGet demo "C/callback"
+    safeGet demo "Find/C/callback"
+    safeGet demo "Cat/C/callback"
+    safeGet demo "viewsrc"
+    safeGet demo "status"
+    sql (demo.="sql")
+    library l
+    debug
+    ur (sys "list")
+    ur (sys "string")
+    ur (pair demo)
+
+  dbs <- forM (d:ts) $ \t -> rule $ do
     let sql = urpSql (toUrp t)
     let dbn = takeBaseName sql
     shell [cmd|dropdb --if-exists $(string dbn)|]
@@ -69,6 +95,7 @@ project = do
   rule $ do
     phony "all"
     depend ts
+    depend d
     depend dbs
 
 main = do

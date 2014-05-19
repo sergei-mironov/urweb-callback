@@ -12,7 +12,7 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test8.db ./test/Test8.exe ./test/Test8.sql
+all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test8.db ./test/Test8.exe ./test/Test8.sql
 ./test/Test8.db: ./Makefile ./test/Test8.exe ./test/Test8.sql
 	dropdb --if-exists Test8
 	createdb Test8
@@ -53,7 +53,40 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	createdb Stress
 	psql -f ./test/Stress.sql Stress
 	touch ./test/Stress.db
-./test/Test8.exe: .fix-multy8
+./demo/Demo.db: ./Makefile ./demo/Demo.exe ./demo/Demo.sql
+	dropdb --if-exists Demo
+	createdb Demo
+	psql -f ./demo/Demo.sql Demo
+	touch ./demo/Demo.db
+./demo/Demo.exe: .fix-multy1
+./demo/Demo.urp: ./Makefile ./demo/Demo.ur ./demo/Demo.urs ./lib.urp .cake3/tmp9
+	cat .cake3/tmp9 > ./demo/Demo.urp
+.cake3/tmp9: ./Makefile
+	-rm -rf .cake3/tmp9
+	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp9
+	echo 'allow mime text/javascript' >> .cake3/tmp9
+	echo 'allow mime text/css' >> .cake3/tmp9
+	echo 'allow mime image/jpeg' >> .cake3/tmp9
+	echo 'allow mime image/png' >> .cake3/tmp9
+	echo 'allow mime image/gif' >> .cake3/tmp9
+	echo 'database dbname=Demo' >> .cake3/tmp9
+	echo 'safeGet Demo/main' >> .cake3/tmp9
+	echo 'safeGet Demo/job_monitor' >> .cake3/tmp9
+	echo 'safeGet Demo/src_monitor' >> .cake3/tmp9
+	echo 'safeGet Demo/job_start' >> .cake3/tmp9
+	echo 'safeGet Demo/C/callback' >> .cake3/tmp9
+	echo 'safeGet Demo/Find/C/callback' >> .cake3/tmp9
+	echo 'safeGet Demo/Cat/C/callback' >> .cake3/tmp9
+	echo 'safeGet Demo/viewsrc' >> .cake3/tmp9
+	echo 'safeGet Demo/status' >> .cake3/tmp9
+	echo 'sql .././demo/Demo.sql' >> .cake3/tmp9
+	echo 'library ../.' >> .cake3/tmp9
+	echo 'debug' >> .cake3/tmp9
+	echo '' >> .cake3/tmp9
+	echo '$$/list' >> .cake3/tmp9
+	echo '$$/string' >> .cake3/tmp9
+	echo '.././demo/Demo' >> .cake3/tmp9
+./test/Test8.exe: .fix-multy9
 ./test/Test8.urp: ./Makefile ./lib.urp ./test/Test8.ur ./test/Test8.urs .cake3/tmp8
 	cat .cake3/tmp8 > ./test/Test8.urp
 .cake3/tmp8: ./Makefile
@@ -85,7 +118,7 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo '$$/list' >> .cake3/tmp8
 	echo '$$/string' >> .cake3/tmp8
 	echo '.././test/Test8' >> .cake3/tmp8
-./test/Test6.exe: .fix-multy7
+./test/Test6.exe: .fix-multy8
 ./test/Test6.urp: ./Makefile ./lib.urp ./test/Test6.ur ./test/Test6.urs .cake3/tmp7
 	cat .cake3/tmp7 > ./test/Test6.urp
 .cake3/tmp7: ./Makefile
@@ -117,7 +150,7 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo '$$/list' >> .cake3/tmp7
 	echo '$$/string' >> .cake3/tmp7
 	echo '.././test/Test6' >> .cake3/tmp7
-./test/Test5.exe: .fix-multy6
+./test/Test5.exe: .fix-multy7
 ./test/Test5.urp: ./Makefile ./lib.urp ./test/Test5.ur ./test/Test5.urs .cake3/tmp6
 	cat .cake3/tmp6 > ./test/Test5.urp
 .cake3/tmp6: ./Makefile
@@ -149,7 +182,7 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo '$$/list' >> .cake3/tmp6
 	echo '$$/string' >> .cake3/tmp6
 	echo '.././test/Test5' >> .cake3/tmp6
-./test/Test4.exe: .fix-multy5
+./test/Test4.exe: .fix-multy6
 ./test/Test4.urp: ./Makefile ./lib.urp ./test/Test4.ur ./test/Test4.urs .cake3/tmp5
 	cat .cake3/tmp5 > ./test/Test4.urp
 .cake3/tmp5: ./Makefile
@@ -181,7 +214,7 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo '$$/list' >> .cake3/tmp5
 	echo '$$/string' >> .cake3/tmp5
 	echo '.././test/Test4' >> .cake3/tmp5
-./test/Test3.exe: .fix-multy4
+./test/Test3.exe: .fix-multy5
 ./test/Test3.urp: ./Makefile ./lib.urp ./test/Test3.ur ./test/Test3.urs .cake3/tmp4
 	cat .cake3/tmp4 > ./test/Test3.urp
 .cake3/tmp4: ./Makefile
@@ -213,7 +246,7 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo '$$/list' >> .cake3/tmp4
 	echo '$$/string' >> .cake3/tmp4
 	echo '.././test/Test3' >> .cake3/tmp4
-./test/Test2.exe: .fix-multy3
+./test/Test2.exe: .fix-multy4
 ./test/Test2.urp: ./Makefile ./lib.urp ./test/Test2.ur ./test/Test2.urs .cake3/tmp3
 	cat .cake3/tmp3 > ./test/Test2.urp
 .cake3/tmp3: ./Makefile
@@ -245,7 +278,7 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo '$$/list' >> .cake3/tmp3
 	echo '$$/string' >> .cake3/tmp3
 	echo '.././test/Test2' >> .cake3/tmp3
-./test/Test1.exe: .fix-multy2
+./test/Test1.exe: .fix-multy3
 ./test/Test1.urp: ./Makefile ./lib.urp ./test/Test1.ur ./test/Test1.urs .cake3/tmp2
 	cat .cake3/tmp2 > ./test/Test1.urp
 .cake3/tmp2: ./Makefile
@@ -277,7 +310,7 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo '$$/list' >> .cake3/tmp2
 	echo '$$/string' >> .cake3/tmp2
 	echo '.././test/Test1' >> .cake3/tmp2
-./test/Stress.exe: .fix-multy1
+./test/Stress.exe: .fix-multy2
 ./test/Stress.urp: ./Makefile ./lib.urp ./test/Stress.ur ./test/Stress.urs .cake3/tmp1
 	cat .cake3/tmp1 > ./test/Stress.urp
 .cake3/tmp1: ./Makefile
@@ -326,37 +359,41 @@ all: ./Makefile ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test
 	echo './CallbackNotify2' >> .cake3/tmp0
 ./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
 	$(URCPP) -c $(UR_CFLAGS) $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
-./test/Stress.sql: .fix-multy1
-./test/Test1.sql: .fix-multy2
-./test/Test2.sql: .fix-multy3
-./test/Test3.sql: .fix-multy4
-./test/Test4.sql: .fix-multy5
-./test/Test5.sql: .fix-multy6
-./test/Test6.sql: .fix-multy7
-./test/Test8.sql: .fix-multy8
+./demo/Demo.sql: .fix-multy1
+./test/Stress.sql: .fix-multy2
+./test/Test1.sql: .fix-multy3
+./test/Test2.sql: .fix-multy4
+./test/Test3.sql: .fix-multy5
+./test/Test4.sql: .fix-multy6
+./test/Test5.sql: .fix-multy7
+./test/Test6.sql: .fix-multy8
+./test/Test8.sql: .fix-multy9
 .INTERMEDIATE: .fix-multy1
-.fix-multy1: ./Makefile ./test/Stress.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Stress
+.fix-multy1: ./Makefile ./demo/Demo.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./demo/Demo
 .INTERMEDIATE: .fix-multy2
-.fix-multy2: ./Makefile ./test/Test1.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test1
+.fix-multy2: ./Makefile ./test/Stress.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Stress
 .INTERMEDIATE: .fix-multy3
-.fix-multy3: ./Makefile ./test/Test2.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test2
+.fix-multy3: ./Makefile ./test/Test1.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test1
 .INTERMEDIATE: .fix-multy4
-.fix-multy4: ./Makefile ./test/Test3.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test3
+.fix-multy4: ./Makefile ./test/Test2.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test2
 .INTERMEDIATE: .fix-multy5
-.fix-multy5: ./Makefile ./test/Test4.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test4
+.fix-multy5: ./Makefile ./test/Test3.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test3
 .INTERMEDIATE: .fix-multy6
-.fix-multy6: ./Makefile ./test/Test5.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test5
+.fix-multy6: ./Makefile ./test/Test4.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test4
 .INTERMEDIATE: .fix-multy7
-.fix-multy7: ./Makefile ./test/Test6.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test6
+.fix-multy7: ./Makefile ./test/Test5.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test5
 .INTERMEDIATE: .fix-multy8
-.fix-multy8: ./Makefile ./test/Test8.urp $(call GUARD,URVERSION)
+.fix-multy8: ./Makefile ./test/Test6.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test/Test6
+.INTERMEDIATE: .fix-multy9
+.fix-multy9: ./Makefile ./test/Test8.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Test8
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
@@ -397,6 +434,14 @@ all: .fix-multy1
 ./test/Test1.db: .fix-multy1
 .PHONY: ./test/Stress.db
 ./test/Stress.db: .fix-multy1
+.PHONY: ./demo/Demo.db
+./demo/Demo.db: .fix-multy1
+.PHONY: ./demo/Demo.exe
+./demo/Demo.exe: .fix-multy1
+.PHONY: ./demo/Demo.urp
+./demo/Demo.urp: .fix-multy1
+.PHONY: .cake3/tmp9
+.cake3/tmp9: .fix-multy1
 .PHONY: ./test/Test8.exe
 ./test/Test8.exe: .fix-multy1
 .PHONY: ./test/Test8.urp
@@ -451,6 +496,8 @@ all: .fix-multy1
 .cake3/tmp0: .fix-multy1
 .PHONY: ./CallbackFFI.o
 ./CallbackFFI.o: .fix-multy1
+.PHONY: ./demo/Demo.sql
+./demo/Demo.sql: .fix-multy1
 .PHONY: ./test/Stress.sql
 ./test/Stress.sql: .fix-multy1
 .PHONY: ./test/Test1.sql
@@ -475,7 +522,7 @@ all: .fix-multy1
 endif
 .PHONY: clean
 clean: 
-	-rm ./CallbackFFI.o ./lib.urp ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Stress.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test5.urp ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test6.urp ./test/Test8.db ./test/Test8.exe ./test/Test8.sql ./test/Test8.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5 .cake3/tmp6 .cake3/tmp7 .cake3/tmp8
+	-rm ./CallbackFFI.o ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./demo/Demo.urp ./lib.urp ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Stress.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test5.urp ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test6.urp ./test/Test8.db ./test/Test8.exe ./test/Test8.sql ./test/Test8.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5 .cake3/tmp6 .cake3/tmp7 .cake3/tmp8 .cake3/tmp9
 	-rm -rf .cake3
 
 endif
