@@ -20,6 +20,8 @@ signature S = sig
 
   val create : option blob -> transaction jobref
 
+  val create2 : string -> option blob -> transaction jobref
+
   val monitor : jobref -> transaction xbody
 
   val abortMore : int -> transaction int
@@ -52,12 +54,14 @@ struct
       return {}
   end)
 
-  fun create stdin =
+  fun create2 cmd stdin =
     jr <- C.nextjob {};
     (case stdin of
-     |None => C.create jr S.cmd (textBlob "")
-     |Some stdin => C.create jr S.cmd stdin);
+     |None => C.create jr cmd (textBlob "")
+     |Some stdin => C.create jr cmd stdin);
     return jr
+
+  fun create stdin = create2 S.cmd stdin
 
   fun monitor_s (jr:jobref) : transaction jobstatus =
     r <- C.get jr;

@@ -12,6 +12,8 @@ signature S = sig
 
   val create : option blob -> transaction jobref
 
+  val create2 : string -> option blob -> transaction jobref
+
   val monitor : jobref -> transaction xbody
 
   val abortMore : int -> transaction int
