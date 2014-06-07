@@ -503,7 +503,6 @@ public:
           path = strdup(jp.second.c_str());
 
           /* int retries_left = 50; */
-          int will_retry = 0;
           failure_kind fk;
 
           do {
@@ -512,38 +511,50 @@ public:
 
             fk = uw_begin(ctx, path);
 
-            if (fk == UNLIMITED_RETRY) {
-              ls->log_debug(ls->logger_data,
-                "Error triggers unlimited retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
-              usleep(1000);
-            } else if (fk == BOUNDED_RETRY) {
-              ls->log_debug(ls->logger_data,
-                  "Error triggers bounded retry in loopback: job #%d text '%s'\n", j->key, uw_error_message(ctx));
-              usleep(1000);
+            if (fk == FATAL ) {
+              ls->log_error(ls->logger_data, "[CB] Fatal error: job #%d text '%s'\n",
+                j->key, uw_error_message(ctx));
+
+              if (uw_rollback(ctx, 0)) {
+                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: job #%d\n", j->key);
+              }
+              break;
             }
-            else if (fk == FATAL) {
-              ls->log_error(ls->logger_data, "Fatal error: tn %d job #%d text '%s'\n", -(int)tn, j->key, uw_error_message(ctx));
+            
+            /* FIXME: BOUNDER RETRIES are treated as unlimited retries here */
+            if( fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY) {
+              ls->log_debug(ls->logger_data, "[CB] Error triggers unlimited retry: job #%d text '%s'\n",
+                j->key, uw_error_message(ctx));
+
+              if (uw_rollback(ctx, 1)) {
+                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: job #%d\n", j->key);
+                break;
+              }
+
+              usleep(1000);
+              continue;
             }
 
-            will_retry = (fk == UNLIMITED_RETRY || (fk == BOUNDED_RETRY ));
-
-            if (fk == FATAL || fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY)
-              if (uw_rollback(ctx, will_retry)) {
-                ls->log_error(ls->logger_data, "Fatal error: rollback failed in loopback: job #%d\n", j->key);
+            if (fk == SUCCESS) {
+              int ret = uw_commit(ctx);
+              if(ret == 1) {
+                ls->log_error(ls->logger_data, "[CB] Commit db_commit error for job #%d\n", j->key);
                 continue;
               }
-          } while (will_retry);
-
-          if (fk != FATAL && fk != BOUNDED_RETRY) {
-            uw_commit(ctx);
-            if( uw_has_error(ctx)) {
-              ls->log_error(ls->logger_data, "Commit error for: job #%d\n", j->key);
-              push(j);
+              else if( uw_has_error(ctx)) {
+                ls->log_error(ls->logger_data, "[CB] Commit generic error for job #%d\n", j->key);
+                continue;
+              }
+              else {
+                ls->log_debug(ls->logger_data, "[CB] Commit successful for job #%d\n", j->key);
+                break;
+              }
             }
-          }
+          } while (1);
 
         } /* while(ok) */
 
+        ls->log_debug(ls->logger_data, "[CB] Exiting from worker %d\n", tn);
         uw_free(ctx);
         return NULL;
 
