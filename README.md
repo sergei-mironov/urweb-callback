@@ -138,6 +138,11 @@ Debugging and testing
 To enable debug messages, set the UWCB\_DEBUG environment variable to some
 value before runnung the application.
 
+To run the stress-testing, 1) Start the ./test/Stress.exe 2) Run the ./stress.sh
+from another terminal. 3) Kill the ./test/Stress.exe. There should be no
+'Bye-bye' after the termination. If they are exist, there is a memory leak in
+the code. Please, drop me a message about this.
+
 Regards,
 Sergey Mironov
 grrwlf@gmail.com
