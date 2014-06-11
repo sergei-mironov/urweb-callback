@@ -81,7 +81,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Demo/status' >> .cake3/tmp9
 	echo 'sql .././demo/Demo.sql' >> .cake3/tmp9
 	echo 'library ../.' >> .cake3/tmp9
-	echo 'debug' >> .cake3/tmp9
 	echo '' >> .cake3/tmp9
 	echo '$$/list' >> .cake3/tmp9
 	echo '$$/string' >> .cake3/tmp9
@@ -113,7 +112,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Test8/status' >> .cake3/tmp8
 	echo 'sql .././test/Test8.sql' >> .cake3/tmp8
 	echo 'library ../.' >> .cake3/tmp8
-	echo 'debug' >> .cake3/tmp8
 	echo '' >> .cake3/tmp8
 	echo '$$/list' >> .cake3/tmp8
 	echo '$$/string' >> .cake3/tmp8
@@ -145,7 +143,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Test6/status' >> .cake3/tmp7
 	echo 'sql .././test/Test6.sql' >> .cake3/tmp7
 	echo 'library ../.' >> .cake3/tmp7
-	echo 'debug' >> .cake3/tmp7
 	echo '' >> .cake3/tmp7
 	echo '$$/list' >> .cake3/tmp7
 	echo '$$/string' >> .cake3/tmp7
@@ -177,7 +174,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Test5/status' >> .cake3/tmp6
 	echo 'sql .././test/Test5.sql' >> .cake3/tmp6
 	echo 'library ../.' >> .cake3/tmp6
-	echo 'debug' >> .cake3/tmp6
 	echo '' >> .cake3/tmp6
 	echo '$$/list' >> .cake3/tmp6
 	echo '$$/string' >> .cake3/tmp6
@@ -209,7 +205,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Test4/status' >> .cake3/tmp5
 	echo 'sql .././test/Test4.sql' >> .cake3/tmp5
 	echo 'library ../.' >> .cake3/tmp5
-	echo 'debug' >> .cake3/tmp5
 	echo '' >> .cake3/tmp5
 	echo '$$/list' >> .cake3/tmp5
 	echo '$$/string' >> .cake3/tmp5
@@ -241,7 +236,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Test3/status' >> .cake3/tmp4
 	echo 'sql .././test/Test3.sql' >> .cake3/tmp4
 	echo 'library ../.' >> .cake3/tmp4
-	echo 'debug' >> .cake3/tmp4
 	echo '' >> .cake3/tmp4
 	echo '$$/list' >> .cake3/tmp4
 	echo '$$/string' >> .cake3/tmp4
@@ -273,7 +267,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Test2/status' >> .cake3/tmp3
 	echo 'sql .././test/Test2.sql' >> .cake3/tmp3
 	echo 'library ../.' >> .cake3/tmp3
-	echo 'debug' >> .cake3/tmp3
 	echo '' >> .cake3/tmp3
 	echo '$$/list' >> .cake3/tmp3
 	echo '$$/string' >> .cake3/tmp3
@@ -305,7 +298,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Test1/status' >> .cake3/tmp2
 	echo 'sql .././test/Test1.sql' >> .cake3/tmp2
 	echo 'library ../.' >> .cake3/tmp2
-	echo 'debug' >> .cake3/tmp2
 	echo '' >> .cake3/tmp2
 	echo '$$/list' >> .cake3/tmp2
 	echo '$$/string' >> .cake3/tmp2
@@ -337,7 +329,6 @@ all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stre
 	echo 'safeGet Stress/status' >> .cake3/tmp1
 	echo 'sql .././test/Stress.sql' >> .cake3/tmp1
 	echo 'library ../.' >> .cake3/tmp1
-	echo 'debug' >> .cake3/tmp1
 	echo '' >> .cake3/tmp1
 	echo '$$/list' >> .cake3/tmp1
 	echo '$$/string' >> .cake3/tmp1

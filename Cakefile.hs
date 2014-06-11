@@ -53,7 +53,6 @@ project = do
       safeGet (t.="ur") "status"
       sql (t.="sql")
       library l
-      debug
       ur (sys "list")
       ur (sys "string")
       ur (pair (t.="ur"))
@@ -79,7 +78,6 @@ project = do
     safeGet demo "status"
     sql (demo.="sql")
     library l
-    debug
     ur (sys "list")
     ur (sys "string")
     ur (pair demo)
