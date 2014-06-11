@@ -17,15 +17,15 @@ Follow the instructions below:
         $ git clone https://github.com/grwlf/urweb-callback
         $ cp -t urweb urweb-callback/*patch
 
-2. Apply the patches and build the Ur/Web compiler
+2. Build the Ur/Web compiler. You may try the latest Ur/Web from the official
+   repo. In case it doesn't work, please test the known-good revision (see
+   below).
 
         $ cd urweb
+
+              # (skip this line to stay on latets Ur/Web)
+        $ hg checkout 924e2ef31f5a
     
-        # Use known-good revision of the Ur/Web. Ignoring the following
-        # line will keep the latest version of the compiler.
-        $ hg checkout 94529780bbcf
-    
-        $ hg import *patch
         $ ./autogen.sh
         $ ./configure
         $ make install
@@ -131,6 +131,14 @@ starts the shell script which counts from 1 to 5.
 
 See test/ folder for more examples.
 
+
+Debugging and testing
+---------------------
+
+To enable debug messages, set the UWCB\_DEBUG environment variable to some
+value before runnung the application.
+
+Regards,
 Sergey Mironov
 grrwlf@gmail.com
 
