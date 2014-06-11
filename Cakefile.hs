@@ -96,6 +96,10 @@ project = do
     depend d
     depend dbs
 
+  rule $ do
+    phony "lib"
+    depend l
+
 main = do
   writeMake (file "Makefile") (project)
   writeMake (file "Makefile.devel") (selfUpdate >> project)
