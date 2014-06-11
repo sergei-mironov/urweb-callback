@@ -15,7 +15,6 @@ extern "C" {
 #include <pthread.h>
 
 #include <urweb_cpp.h>
-#include <srvthread.h>
 #include "CallbackFFI.h"
 }
 
