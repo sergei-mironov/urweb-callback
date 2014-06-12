@@ -91,14 +91,14 @@ project = do
     shell [cmd|touch @(sql.="db")|]
 
   rule $ do
+    phony "lib"
+    depend l
+
+  rule $ do
     phony "all"
     depend ts
     depend d
     depend dbs
-
-  rule $ do
-    phony "lib"
-    depend l
 
 main = do
   writeMake (file "Makefile") (project)

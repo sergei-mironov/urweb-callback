@@ -11,10 +11,10 @@ unexport MAIN
 URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
-.PHONY: lib
-lib: ./Makefile.devel ./lib.urp
 .PHONY: all
 all: ./Makefile.devel ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test8.db ./test/Test8.exe ./test/Test8.sql
+.PHONY: lib
+lib: ./Makefile.devel ./lib.urp
 ./test/Test8.db: ./Makefile.devel ./test/Test8.exe ./test/Test8.sql
 	dropdb --if-exists Test8
 	createdb Test8
@@ -413,10 +413,10 @@ export MAIN=1
 
 ifneq ($(MAKECMDGOALS),clean)
 
-.PHONY: lib
-lib: .fix-multy1
 .PHONY: all
 all: .fix-multy1
+.PHONY: lib
+lib: .fix-multy1
 .PHONY: ./test/Test8.db
 ./test/Test8.db: .fix-multy1
 .PHONY: ./test/Test6.db
