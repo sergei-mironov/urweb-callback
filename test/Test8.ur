@@ -10,17 +10,37 @@ fun template (mb:transaction xbody) : transaction page =
     </xml>
 
 fun feed jr i : transaction page =
-  j <- CF.deref jr;
-  (case i.Text = "" of
-    |True => CF.pushStdinEOF j
-    |False => CF.pushStdin j (textBlob i.Text) 1024);
+  C.feed jr (Callback.Chunk (textBlob i.Text, None));
+  redirect (url (job_monitor jr))
+
+and feedEOF jr i : transaction page =
+  C.feed jr (Callback.Chunk (textBlob "", Some Callback.EOF));
   redirect (url (job_monitor jr))
 
 and job_monitor (jr:C.jobref) : transaction page = template (
   j <- C.get jr;
   return <xml>
+
     <div>
-      Job : {[jr]}
+      <form>
+        Feed some input:
+        <br/>
+        <textbox{#Text}/>
+        <br/>
+        <submit value="Feed text line" action={feed jr}/>
+        <i>(Note Stdout changes)</i>
+      </form>
+      <br/>
+      <form>
+        <submit value="EOF" action={feedEOF jr}/>
+        <i>(Note ExitCode changes)</i>
+      </form>
+    </div>
+
+    <hr/>
+
+    <div>
+      JobRef : {[jr]}
       <br/>
       Cmd : {[j.Cmd]}
       <br/>
@@ -28,27 +48,22 @@ and job_monitor (jr:C.jobref) : transaction page = template (
       <br/>
       Stdout:  {[j.Stdout]}
     </div>
-    <div>
-      <form>
-        Feed some input:
-        <br/>
-        <textbox{#Text}/>
-        <br/>
-        <submit action={feed jr}/>
-      </form>
-    </div>
+
   </xml>)
 
-val ja = { Cmd = "cat" , Stdin = Some (textBlob "Hello, kitty\n"), Args = "aaaa"::[] }
+val s = "Hello kitty\n"
 
 fun job_start {} : transaction page =
-  jr <- C.nextjob {};
-  C.create2 jr ja;
+  ja <- return (C.shellCommand "cat");
+  jr <- C.create (ja -- #Stdin ++ {Stdin = Callback.Chunk (textBlob s, None)});
   redirect (url (job_monitor jr))
 
 fun main {} : transaction page = template (
   return
     <xml>
-      <a link={job_start {}}>Start a sleep job</a>
+      This test will the 'cat' job and allow the user to feed it's input.
+      Initially, the cat will be provided with <b>{[s]}</b> string.
+      <br/>
+      <a link={job_start {}}>Start the job</a>
     </xml>)
 

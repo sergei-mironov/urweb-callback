@@ -31,8 +31,7 @@ fun job_monitor (jr:C.jobref) : transaction page =
     )
 
 fun job_start {} : transaction page =
-  jr <- C.nextjob {};
-  C.create jr "for i in `seq 1 1 5`; do echo -n $i; sleep 2 ; done" (textBlob "");
+  jr <- C.create (C.shellCommand "for i in `seq 1 1 5`; do echo -n $i; sleep 2 ; done");
   redirect (url (job_monitor jr))
 
 fun main {} : transaction page = template (

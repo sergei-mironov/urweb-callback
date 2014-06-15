@@ -10,9 +10,11 @@ signature S = sig
 
   type jobref = CallbackFFI.jobref
 
-  val create : option blob -> transaction jobref
+  type jobargs = Callback.jobargs_
 
-  val create2 : string -> option blob -> transaction jobref
+  val create : jobargs  -> transaction jobref
+
+  val createDefault : option blob -> transaction jobref
 
   val monitor : jobref -> transaction xbody
 

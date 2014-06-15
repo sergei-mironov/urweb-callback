@@ -81,6 +81,7 @@ struct job {
     exitcode = -1;
     close_stdin = false;
     thread_started = false;
+    cmd_and_args = cmd;
 
     dprintf("Hello job #%d (cnt %d)\n", key, int(njobs++));
   }
@@ -92,6 +93,7 @@ struct job {
   jkey key;
 
   string cmd;
+  string cmd_and_args;
 
   string url_completion_cb;
   string url_notify_cb;
@@ -664,7 +666,7 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   }
 
   if(pp == NULL)
-    uw_error(ctx, FATAL, "Failed to create a job %s using reference %d\n", cmd, jr);
+    uw_error(ctx, FATAL, "Failed to create a job %s using jey #%d\n", cmd, jr);
 
   uw_register_transactional(ctx, pp, NULL, NULL,
     [](void* pp, int) {
@@ -715,10 +717,10 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 
   switch(ret) {
     case closed:
-      uw_error(ctx, FATAL, "job %d stdin closed\n", get(j)->key);
+      uw_error(ctx, FATAL, "job #%d stdin closed\n", get(j)->key);
       break;
     case err:
-      uw_error(ctx, BOUNDED_RETRY, "job %d stdin size exceeds limit\n", get(j)->key);
+      uw_error(ctx, BOUNDED_RETRY, "job #%d stdin size exceeds limit\n", get(j)->key);
       break;
     default:
       break;
@@ -737,7 +739,10 @@ uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI
 
 uw_Basis_unit uw_CallbackFFI_pushArg(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string arg)
 {
+  if(get(j)->thread_started)
+    uw_error(ctx, FATAL, "pushArg: job #%d is already running\n", get(j)->key);
   get(j)->args.push_back(arg); 
+  get(j)->cmd_and_args += (string(" ") + arg);
 }
 
 uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)
@@ -922,9 +927,10 @@ uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job
 
 uw_Basis_string uw_CallbackFFI_cmd(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
-  size_t sz = get(j)->cmd.length();
+  string *s = &get(j)->cmd_and_args;
+  size_t sz = s->length();
   char* str = (char*)uw_malloc(ctx, sz + 1);
-  memcpy(str, get(j)->cmd.c_str(), sz);
+  memcpy(str, s->c_str(), sz);
   str[sz] = 0;
   return str;
 }

@@ -27,7 +27,7 @@ end)
 fun viewsrc (s:string) : transaction page =
   template(
     n <- Cat.abortMore 30;
-    jr <- Cat.create (Some (textBlob (s ^ "\n")));
+    jr <- Cat.createDefault (Some (textBlob (s ^ "\n")));
     c <- Cat.monitor jr;
       return <xml>
         {c}
@@ -51,7 +51,7 @@ fun job_monitor jr : transaction page =
 
 fun job_start {} : transaction page =
   n <- Find.abortMore 30;
-  jr <- Find.create None;
+  jr <- Find.createDefault None;
   redirect (url (job_monitor jr))
 
 fun main {} : transaction page = template (

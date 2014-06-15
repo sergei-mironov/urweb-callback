@@ -1,13 +1,11 @@
 structure C = Callback.Default
 
 fun getA {} : transaction string =
-  jr <- C.nextjob {};
-  j <- C.runNow jr ("echo a") (textBlob "");
+  j <- C.createSync (C.shellCommand "echo a");
   return j.Stdout
 
 fun getB {} : transaction string =
-  jr <- C.nextjob {};
-  j <- C.runNow jr ("echo b") (textBlob "");
+  j <- C.createSync (C.shellCommand "echo b");
   return j.Stdout
 
 fun main {} : transaction page =

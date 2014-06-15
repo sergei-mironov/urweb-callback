@@ -1,7 +1,12 @@
+
 con jobrec = [
+  (* Job reference which may be passed to clients *)
   JobRef = int,
+  (* Exit code of the job process *)
   ExitCode = option int,
+  (* Command line of the job *)
   Cmd = string,
+  (* Stdout of the job (at least stdout_sz bytes) *)
   Stdout = string]
 
 sequence jobrefs
@@ -9,30 +14,46 @@ sequence jobrefs
 table jobs : $jobrec
   PRIMARY KEY JobRef
 
-type jobargs = {
-    Cmd : string
-  , Stdin : option blob
-  , Args : list string
-  }
-
 task initialize = fn _ =>
   CallbackFFI.initialize 4;
   return {}
 
 fun mapM_ a b = i <- List.mapM a b; return {}
 
+datatype eof = EOF
+
+datatype buffer = Chunk of blob * (option eof)
+
+type jobargs_ = {
+    Cmd : string
+  , Stdin : buffer
+  , Args : list string
+  }
+
+fun shellCommand_ s =
+  {Cmd = "/bin/sh", Stdin = Chunk (textBlob "", Some EOF), Args = "-c" :: s :: [] }
+
+
 signature S = sig
+
   type jobref = CallbackFFI.jobref
 
-  val nextjob : unit -> transaction jobref
+  type jobargs = jobargs_
 
-  val create : jobref -> string -> blob -> transaction unit
+  val nextJobRef : transaction jobref
 
-  val create2 : jobref -> jobargs -> transaction unit
+  val shellCommand : string -> jobargs
+
+  val create : jobargs -> transaction jobref
+
+  val createWithRef : jobref -> jobargs -> transaction unit
+
+  val createSync : jobargs -> transaction (record jobrec)
+
+
+  val feed : jobref -> buffer -> transaction unit
 
   val get : jobref -> transaction (record jobrec)
-
-  val runNow : jobref -> string -> blob -> transaction (record jobrec)
 
   val lastLine : string -> string
 
@@ -47,6 +68,8 @@ sig
 
   val stdout_sz : int
 
+  val stdin_sz : int
+
   val callback : (record jobrec) -> transaction unit
 
 end) : S =
@@ -55,7 +78,20 @@ struct
 
   type jobref = CallbackFFI.jobref
 
-  fun nextjob {} = nextval jobrefs
+  type jobargs = jobargs_
+
+  val nextJobRef = nextval jobrefs
+
+  val shellCommand = shellCommand_
+
+  fun runtimeJobRec j =
+    e <- (let val e = CallbackFFI.exitcode j in
+            if e < 0 then
+              return None
+            else
+              return (Some e)
+          end);
+    return {JobRef=(CallbackFFI.ref j), ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
 
   fun callback (jr:jobref) : transaction page =
     j <- CallbackFFI.deref jr;
@@ -73,26 +109,42 @@ struct
         S.callback ji.Jobs;
         return <xml/>
 
-  fun create (jr:jobref) (cmd:string) (inp:blob) : transaction unit =
-    j <- CallbackFFI.create cmd S.stdout_sz jr;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[cmd]}, ""));
+  fun feed_ j b =
+    case b of
+     |Chunk (b,Some EOF) =>
+        CallbackFFI.pushStdin j b (blobSize b);
+        CallbackFFI.pushStdinEOF j
+     |Chunk (b,None) =>
+        CallbackFFI.pushStdin j b (blobSize b)
+
+  fun createWithRef (jr:jobref) (ja:jobargs) : transaction unit =
+    j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
+    mapM_ (CallbackFFI.pushArg j) ja.Args;
     CallbackFFI.setCompletionCB j (Some (url (callback jr)));
-    CallbackFFI.pushStdin j inp (blobSize inp);
-    CallbackFFI.pushStdinEOF j;
+    feed_ j ja.Stdin;
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[ja.Cmd]}, ""));
     CallbackFFI.run j;
     return {}
 
-  fun create2 jr (ja:jobargs) : transaction unit =
-    j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[ja.Cmd]}, ""));
-    debug ("job create2 " ^ (show jr));
-    CallbackFFI.setCompletionCB j (Some (url (callback jr)));
-    (case ja.Stdin of
-     |Some i => CallbackFFI.pushStdin j i (blobSize i)
-     |None => return {});
-    mapM_ (CallbackFFI.pushArg j) ja.Args;
-    CallbackFFI.run j;
-    return {}
+  fun create (ja:jobargs) : transaction jobref =
+    jr <- nextJobRef;
+    createWithRef jr ja;
+    return jr
+
+  fun createSync ja =
+    let
+      val Chunk (i,_) = ja.Stdin
+    in
+      jr <- nextJobRef;
+      j <- CallbackFFI.runNow ja.Cmd S.stdout_sz i jr;
+      jr <- runtimeJobRec j;
+      CallbackFFI.cleanup j;
+      return jr
+    end
+
+  val feed jr b : transaction unit =
+    j <- CallbackFFI.deref jr;
+    feed_ j b
 
   val lastLine = CallbackFFI.lastLine
 
@@ -100,30 +152,10 @@ struct
     mj <- CallbackFFI.tryDeref jr;
     case mj of
       |Some j =>
-        e <- (let val e = CallbackFFI.exitcode j in
-                if e < 0 then
-                  return None
-                else
-                  return (Some e)
-              end);
-        return {JobRef=jr, ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
+        runtimeJobRec j
       |None =>
         r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
         return r.Jobs
-
-  fun runNow jr cmd stdin =
-    j <- CallbackFFI.runNow cmd S.stdout_sz stdin jr;
-    e <- (let val e = CallbackFFI.exitcode j in
-            if e < 0 then
-              return None
-            else
-              return (Some e)
-          end);
-    so <- return (CallbackFFI.stdout j);
-    (* Don't waste the diskspace by inserting anything into the databse
-      dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[e]}, {[cmd]}, {[so]})); *)
-    CallbackFFI.cleanup j;
-    return {JobRef=jr, ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
 
   val abortMore limit =
     n <- CallbackFFI.nactive {};
@@ -140,6 +172,7 @@ structure Default = Make(
   struct
     val gc_depth = 1000
     val stdout_sz = 1024
+    val stdin_sz = 1024
     val callback = fn _ => return {}
   end)
 

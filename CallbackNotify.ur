@@ -16,6 +16,7 @@ type jobref = CallbackFFI.jobref
 structure C = Callback.Make (struct
   val gc_depth = 100
   val stdout_sz = 1024
+  val stdin_sz = 1024
 
   val callback = fn (ji:job) =>
     query1 (SELECT * FROM handles WHERE handles.JobRef = {[ji.JobRef]}) (fn r s =>
@@ -26,13 +27,17 @@ structure C = Callback.Make (struct
   
 end)
 
-val nextjob = C.nextjob
+val nextJobRef = C.nextJobRef
+
+type jobargs = C.jobargs
 
 val create = C.create
 
 val jobs = Callback.jobs
 
 val abortMore = C.abortMore
+
+val shellCommand = C.shellCommand
 
 fun monitor jr = 
   r <- C.get jr;

@@ -33,7 +33,7 @@ end)
 fun viewsrc (s:string) : transaction page =
   template(
     n <- Cat.abortMore 30;
-    jr <- Cat.create (Some (textBlob (s ^ "\n")));
+    jr <- Cat.createDefault (Some (textBlob (s ^ "\n")));
     c <- Cat.monitor jr;
       return <xml>
         {c}
@@ -53,7 +53,7 @@ end)
 fun main {} : transaction page =
   template(
     n <- Find.abortMore 30;
-    jr <- Find.create None;
+    jr <- Find.createDefault None;
     j <- Find.monitor jr;
     return <xml>{j}</xml>)
 
