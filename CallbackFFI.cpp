@@ -581,17 +581,27 @@ public:
   jobset() { m.lock(); }
   ~jobset() { m.unlock(); }
 
-  void insert(const jptr &j) {
+  bool insert_initial(const jptr &j) {
     auto i = jm.find(j->key);
     if (i != jm.end()) {
-      i->second.push_back(j);
-      dprintf("jobset: inserting #%d (nonempty)\n", j->key);
+      return false;
     }
     else {
       std::list<jptr> l;
       l.push_back(j);
       jm.insert(jm.end(), jobmap::value_type(j->key, l));
-      dprintf("jobset: inserting #%d\n", j->key);
+      return true;
+    }
+  }
+
+  bool insert_second(const jptr &j) {
+    auto i = jm.find(j->key);
+    if (i != jm.end()) {
+      i->second.push_back(j);
+      return true;
+    }
+    else {
+      return false;
     }
   }
 
@@ -647,8 +657,14 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
     get(pp)->m.lock();
 
     jobset s;
-    s.insert(get(pp));
+    if(! s.insert_initial(get(pp))) {
+      delete ((jptr*)pp);
+      pp = NULL;
+    }
   }
+
+  if(pp == NULL)
+    uw_error(ctx, FATAL, "Failed to create a job %s using reference %d\n", cmd, jr);
 
   uw_register_transactional(ctx, pp, NULL, NULL,
     [](void* pp, int) {
@@ -661,7 +677,8 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   uw_register_transactional(ctx, pp,
     [] (void *pp) {
       jobset s;
-      s.insert(get(pp));
+      bool ret = s.insert_second(get(pp));
+      assert(ret == true);
     },
     NULL, NULL);
 
