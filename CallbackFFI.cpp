@@ -39,8 +39,6 @@ typedef int uw_System_pipe[4];
 
 #define JOB_SIGNAL SIGUSR1
 
-#define UR_SYSTEM_POLL_TIMOUT_MS 1000
-
 #define UW_SYSTEM_PIPE_INIT(x) { x[2] = 0; x[3]=0; }
 #define UW_SYSTEM_PIPE_CLOSE_IN(x)  { close(x[1]); x[1+2] = 0; }
 #define UW_SYSTEM_PIPE_CLOSE_OUT(x) { close(x[0]); x[0+2] = 0; }
@@ -252,13 +250,18 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
           MY_FD_SET_546( cmd_to_ur2[0], &rfds );
         }
 
-        if (ur_to_cmd[1+2] != 0) {
-          MY_FD_SET_546( ur_to_cmd[1], &wfds );
+        {
+          jlock _(r);
+          if(r->buf_stdin.size() > r->sz_stdin) {
+            if (ur_to_cmd[1+2] != 0) {
+              MY_FD_SET_546( ur_to_cmd[1], &wfds );
+            }
+          }
         }
 
         struct timespec tv;
-        tv.tv_sec  = UR_SYSTEM_POLL_TIMOUT_MS / 1000;
-        tv.tv_nsec = (UR_SYSTEM_POLL_TIMOUT_MS % 1000) * 1000;
+        tv.tv_sec  = 1;
+        tv.tv_nsec = 0;
 
         int ret = pselect(max_fd+1, &rfds, &wfds, &efds, &tv, pss);
 
@@ -329,6 +332,8 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
         if (FD_ISSET( ur_to_cmd[1], &wfds )) {
           ret--;
 
+          dprintf("Writing for Job #%d\n", r->key);
+
           // FIXME: calling C write while holding a mutex. Looks safe, but
           // still suspicious.
           jlock _(r);
@@ -364,20 +369,23 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
     r->err << "C++ `...' exception";
   }
 
+  if(r->err.str().size() > 0)
+    dprintf("Job #%d's main loop executed with errors: %s\n", r->err.str().c_str());
+
   if (r->pid != -1) {
     int status;
     int rc = waitpid(r->pid, &status, 0);
 
     jlock _(r);
     if (rc == -1){
-      r->err << "waitpid failed: pid " << r->pid << " errno " << errno;
+      dprintf("Job #%d waitpid() failed with %m\n", r->key);
     } else if (rc == r->pid) {
       if(WIFSIGNALED(status))
         r->exitcode = -WTERMSIG(status);
       else
         r->exitcode = WEXITSTATUS(status);
     } else {
-      r->err << "waitpid unexpected result: code " << rc;
+      dprintf("Job #%d waitpid unexpected result code %d\n", r->key, rc);
     }
   }
 
@@ -694,20 +702,32 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 {
   enum {ok, closed, err} ret = err;
 
+  int jr = get(j)->key;
+
+  if(_stdin.size > maxsz)
+    uw_error(ctx, FATAL, "pushStdin: input provided will never fit into job #%d's buffer of size %d\n", jr, maxsz);
+
   {
     if(!get(j)->close_stdin) {
       blob &buf_stdin = get(j)->buf_stdin;
+
       size_t oldsz = buf_stdin.size() - get(j)->sz_stdin;
-      size_t newsz = buf_stdin.size() + _stdin.size - get(j)->sz_stdin;
-      if(newsz <= maxsz ) {
+      size_t newsz = oldsz + _stdin.size;
+      if(newsz <= maxsz) {
         buf_stdin.resize(newsz);
         memcpy(&buf_stdin[0], &buf_stdin[get(j)->sz_stdin], oldsz);
         memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
         get(j)->sz_stdin = 0;
 
-        if(get(j)->thread_started)
-          pthread_kill(get(j)->thread, JOB_SIGNAL);
+        if(get(j)->thread_started) {
+          int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
+          if(ret != 0)
+            dprintf("pushStdin: pthread_kill() failed with %d\n", ret);
+        }
         ret = ok;
+      }
+      else {
+        ret = err;
       }
     }
     else {
@@ -717,10 +737,10 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 
   switch(ret) {
     case closed:
-      uw_error(ctx, FATAL, "job #%d stdin closed\n", get(j)->key);
+      uw_error(ctx, FATAL, "job #%d stdin closed\n", jr);
       break;
     case err:
-      uw_error(ctx, BOUNDED_RETRY, "job #%d stdin size exceeds limit\n", get(j)->key);
+      uw_error(ctx, BOUNDED_RETRY, "job #%d stdin size exceeds limit\n", jr);
       break;
     default:
       break;
@@ -732,8 +752,11 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   get(j)->close_stdin = true;
-  if(get(j)->thread_started)
-    pthread_kill(get(j)->thread, JOB_SIGNAL);
+  if(get(j)->thread_started) {
+    int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
+    if(ret != 0)
+      dprintf("pushStdin: pthread_kill() failed with %d\n", ret);
+  }
   return 0;
 }
 
@@ -874,9 +897,11 @@ uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackF
 
   if(pp) {
     get(pp)->m.lock();
+    dprintf("Job #%d deref lock\n", get(pp)->key);
 
     uw_register_transactional(ctx, pp, NULL, NULL,
       [](void* pp, int) {
+        dprintf("Job #%d deref unlock\n", get(pp)->key);
         get(pp)->m.unlock();
         delete ((jptr*)pp);
       });
