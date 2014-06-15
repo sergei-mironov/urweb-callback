@@ -31,6 +31,7 @@ project = do
 
   ts <- forM tests $ \t -> do
     uwapp "-dbms postgres" t $ do
+      debug
       allow url "http://code.jquery.com/ui/1.10.3/jquery-ui.js";
       allow mime "text/javascript";
       allow mime "text/css";

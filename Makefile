@@ -92,6 +92,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp8 > ./test/Test8.urp
 .cake3/tmp8: ./Makefile
 	-rm -rf .cake3/tmp8
+	echo 'debug' >> .cake3/tmp8
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp8
 	echo 'allow mime text/javascript' >> .cake3/tmp8
 	echo 'allow mime text/css' >> .cake3/tmp8
@@ -123,6 +124,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp7 > ./test/Test6.urp
 .cake3/tmp7: ./Makefile
 	-rm -rf .cake3/tmp7
+	echo 'debug' >> .cake3/tmp7
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp7
 	echo 'allow mime text/javascript' >> .cake3/tmp7
 	echo 'allow mime text/css' >> .cake3/tmp7
@@ -154,6 +156,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp6 > ./test/Test5.urp
 .cake3/tmp6: ./Makefile
 	-rm -rf .cake3/tmp6
+	echo 'debug' >> .cake3/tmp6
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp6
 	echo 'allow mime text/javascript' >> .cake3/tmp6
 	echo 'allow mime text/css' >> .cake3/tmp6
@@ -185,6 +188,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp5 > ./test/Test4.urp
 .cake3/tmp5: ./Makefile
 	-rm -rf .cake3/tmp5
+	echo 'debug' >> .cake3/tmp5
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp5
 	echo 'allow mime text/javascript' >> .cake3/tmp5
 	echo 'allow mime text/css' >> .cake3/tmp5
@@ -216,6 +220,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp4 > ./test/Test3.urp
 .cake3/tmp4: ./Makefile
 	-rm -rf .cake3/tmp4
+	echo 'debug' >> .cake3/tmp4
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp4
 	echo 'allow mime text/javascript' >> .cake3/tmp4
 	echo 'allow mime text/css' >> .cake3/tmp4
@@ -247,6 +252,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp3 > ./test/Test2.urp
 .cake3/tmp3: ./Makefile
 	-rm -rf .cake3/tmp3
+	echo 'debug' >> .cake3/tmp3
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp3
 	echo 'allow mime text/javascript' >> .cake3/tmp3
 	echo 'allow mime text/css' >> .cake3/tmp3
@@ -278,6 +284,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp2 > ./test/Test1.urp
 .cake3/tmp2: ./Makefile
 	-rm -rf .cake3/tmp2
+	echo 'debug' >> .cake3/tmp2
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp2
 	echo 'allow mime text/javascript' >> .cake3/tmp2
 	echo 'allow mime text/css' >> .cake3/tmp2
@@ -309,6 +316,7 @@ lib: ./Makefile ./lib.urp
 	cat .cake3/tmp1 > ./test/Stress.urp
 .cake3/tmp1: ./Makefile
 	-rm -rf .cake3/tmp1
+	echo 'debug' >> .cake3/tmp1
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp1
 	echo 'allow mime text/javascript' >> .cake3/tmp1
 	echo 'allow mime text/css' >> .cake3/tmp1
