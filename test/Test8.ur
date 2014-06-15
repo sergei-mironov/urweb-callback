@@ -1,4 +1,12 @@
-structure C = Callback.Default
+val s = "Hello kitty\n"
+
+structure C = Callback.Make(
+  struct
+    val gc_depth = 1000
+    val stdout_sz = 1024
+    val stdin_sz = String.length s
+    val callback = fn _ => return {}
+  end)
 structure CF = CallbackFFI
 
 fun template (mb:transaction xbody) : transaction page =
@@ -20,7 +28,6 @@ and feedEOF jr i : transaction page =
 and job_monitor (jr:C.jobref) : transaction page = template (
   j <- C.get jr;
   return <xml>
-
     <div>
       <form>
         Feed some input:
@@ -51,7 +58,6 @@ and job_monitor (jr:C.jobref) : transaction page = template (
 
   </xml>)
 
-val s = "Hello kitty\n"
 
 fun job_start {} : transaction page =
   ja <- return (C.shellCommand "cat");

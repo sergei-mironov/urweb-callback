@@ -112,10 +112,10 @@ struct
   fun feed_ j b =
     case b of
      |Chunk (b,Some EOF) =>
-        CallbackFFI.pushStdin j b (blobSize b);
+        CallbackFFI.pushStdin j b S.stdin_sz;
         CallbackFFI.pushStdinEOF j
      |Chunk (b,None) =>
-        CallbackFFI.pushStdin j b (blobSize b)
+        CallbackFFI.pushStdin j b S.stdin_sz
 
   fun createWithRef (jr:jobref) (ja:jobargs) : transaction unit =
     j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
