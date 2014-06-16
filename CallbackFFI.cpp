@@ -595,27 +595,22 @@ public:
   jobset() { m.lock(); }
   ~jobset() { m.unlock(); }
 
-  bool insert_initial(const jptr &j) {
+  bool insert(const jptr &j) {
     auto i = jm.find(j->key);
     if (i != jm.end()) {
-      return false;
+      if(j.get() != i->second.front().get()) {
+        return false;
+      }
+      else {
+        i->second.push_back(j);
+        return true;
+      }
     }
     else {
       std::list<jptr> l;
       l.push_back(j);
       jm.insert(jm.end(), jobmap::value_type(j->key, l));
       return true;
-    }
-  }
-
-  bool insert_second(const jptr &j) {
-    auto i = jm.find(j->key);
-    if (i != jm.end()) {
-      i->second.push_back(j);
-      return true;
-    }
-    else {
-      return false;
     }
   }
 
@@ -669,9 +664,10 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   {
     pp = new jptr(new job(jr, cmd, stdout_sz));
     get(pp)->m.lock();
+    dprintf("Job #%d create lock\n", get(pp)->key);
 
     jobset s;
-    if(! s.insert_initial(get(pp))) {
+    if(! s.insert(get(pp))) {
       delete ((jptr*)pp);
       pp = NULL;
     }
@@ -685,13 +681,14 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
       jobset s;
       s.remove(get(pp));
       get(pp)->m.unlock();
+      dprintf("Job #%d create unlock\n", get(pp)->key);
       delete ((jptr*)pp);
     });
 
   uw_register_transactional(ctx, pp,
     [] (void *pp) {
       jobset s;
-      bool ret = s.insert_second(get(pp));
+      bool ret = s.insert(get(pp));
       assert(ret == true);
     },
     NULL, NULL);
@@ -874,6 +871,8 @@ uw_Basis_unit uw_CallbackFFI_run(
   return 0;
 }
 
+//FIXME: It is an error to call cleanup more than 1 time per transaction. Handle
+//this somehow
 uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j_)
 {
   void* j = new jptr(get(j_));
