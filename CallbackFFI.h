@@ -55,12 +55,9 @@ uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string 
 
 uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_string msg);
 
-uw_CallbackFFI_job uw_CallbackFFI_runNow(
+uw_Basis_unit uw_CallbackFFI_executeSync(
   struct uw_context *ctx,
-  uw_Basis_string cmd,
-  uw_Basis_int stdout_sz,
-  uw_Basis_blob _stdin,
-  uw_Basis_int jobref);
+  uw_CallbackFFI_job j);
 
 #ifdef __cplusplus
 } // extern "C"

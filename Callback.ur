@@ -139,13 +139,17 @@ struct
 
   fun createSync ja =
     let
-      val Chunk (i,_) = ja.Stdin
+      val Chunk (b,_) = ja.Stdin
     in
       jr <- nextJobRef;
-      j <- CallbackFFI.runNow ja.Cmd S.stdout_sz i jr;
-      jr <- runtimeJobRec j;
+      j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
+      mapM_ (CallbackFFI.pushArg j) ja.Args;
+      CallbackFFI.pushStdin j b S.stdin_sz;
+      CallbackFFI.pushStdinEOF j;
+      CallbackFFI.executeSync j;
+      jrec <- runtimeJobRec j;
       CallbackFFI.cleanup j;
-      return jr
+      return jrec
     end
 
   val feed jr b : transaction unit =

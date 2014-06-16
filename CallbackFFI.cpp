@@ -198,6 +198,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       dup(cmd_to_ur2[1]);
       close(cmd_to_ur2[1]);
 
+#if 0
       if(r->args.size() == 0) {
         /* The Insecure way */
         char * argv[3];
@@ -205,11 +206,14 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
         argv[1] = (char*) "-c";
         argv[2] = (char*) r->cmd.c_str();
         argv[3] = NULL;
+        dprintf("Warning: insecure execv\n");
         for(int i=0; i<3; i++)
           dprintf("arg[%d]: %s\n", i, argv[i]);
         execv("/bin/sh", argv);
       }
-      else {
+      else
+#endif
+      {
         /* The Secure way */
         char* cmd = (char*) r->cmd.c_str();
         char** argv = new char* [r->args.size() + 2];
@@ -1004,25 +1008,16 @@ uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string 
   return str;
 }
 
-uw_CallbackFFI_job uw_CallbackFFI_runNow(
+uw_Basis_unit uw_CallbackFFI_executeSync(
   struct uw_context *ctx,
-  uw_Basis_string cmd,
-  uw_Basis_int stdout_sz,
-  uw_Basis_blob _stdin,
-  uw_Basis_int jobref)
+  uw_CallbackFFI_job j)
 {
-  uw_CallbackFFI_job j = uw_CallbackFFI_create(ctx, cmd, stdout_sz, jobref);
-  uw_CallbackFFI_pushStdin(ctx, j, _stdin, _stdin.size);
-  uw_CallbackFFI_pushStdinEOF(ctx, j);
-
   try {
     execute(get(j), uw_get_loggers(ctx), NULL);
   }
   catch(job::exception &e) {
-    dprintf("CallbackFFI::runNow error: %s\n", e.c_str());
+    dprintf("CallbackFFI::executeSync error: %s\n", e.c_str());
   }
-
-  return j;
 }
 
 uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_string msg)

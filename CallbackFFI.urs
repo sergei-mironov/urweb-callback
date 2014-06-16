@@ -29,7 +29,7 @@ val errors : job -> string
 
 val lastLine : string -> string
 
-val runNow : string -> int -> blob -> jobref -> transaction job
+val executeSync : job -> transaction unit
 
 (* re-run the handler *)
 val forceBoundedRetry : string -> transaction unit
