@@ -21,11 +21,17 @@ type jobargs_ = {
 
 signature S = sig
 
-  type jobref = CallbackFFI.jobref
+  (** Arguments API **)
 
   type jobargs = jobargs_
 
   val shellCommand : string -> jobargs
+
+  val mkBuffer : string -> buffer
+
+  (** Job API **)
+
+  type jobref = CallbackFFI.jobref
 
   (* Generate uniq jobref *)
   val nextJobRef : transaction jobref

@@ -24,6 +24,8 @@ datatype eof = EOF
 
 datatype buffer = Chunk of blob * (option eof)
 
+fun mkBuffer_ s = Chunk (textBlob s, Some EOF)
+
 type jobargs_ = {
     Cmd : string
   , Stdin : buffer
@@ -43,6 +45,8 @@ signature S = sig
   val nextJobRef : transaction jobref
 
   val shellCommand : string -> jobargs
+
+  val mkBuffer : string -> buffer
 
   val create : jobargs -> transaction jobref
 
@@ -83,6 +87,8 @@ struct
   val nextJobRef = nextval jobrefs
 
   val shellCommand = shellCommand_
+
+  val mkBuffer = mkBuffer_
 
   fun runtimeJobRec j =
     e <- (let val e = CallbackFFI.exitcode j in
