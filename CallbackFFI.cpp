@@ -700,12 +700,13 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
     uw_Basis_blob _stdin,
     uw_Basis_int maxsz)
 {
-  enum {ok, closed, err} ret = err;
 
   int jr = get(j)->key;
 
   if(_stdin.size > maxsz)
     uw_error(ctx, FATAL, "pushStdin: input provided will never fit into job #%d's buffer of size %d\n", jr, maxsz);
+
+  enum {ok, closed, err} ret = err;
 
   {
     if(!get(j)->close_stdin) {
@@ -719,10 +720,15 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
         memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
         get(j)->sz_stdin = 0;
 
-        if(get(j)->thread_started) {
-          int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
-          if(ret != 0)
-            dprintf("pushStdin: pthread_kill() failed with %d\n", ret);
+        if(_stdin.size > 0) {
+          if(get(j)->thread_started) {
+            int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
+            if(ret != 0)
+              dprintf("pushStdin: pthread_kill() failed with %d\n", ret);
+          }
+        }
+        else {
+          dprintf("pushStdin: stdin.size == 0, doing nothing\n", ret);
         }
         ret = ok;
       }
