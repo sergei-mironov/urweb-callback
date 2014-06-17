@@ -38,7 +38,7 @@ uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job k);
 
-uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx, uw_Basis_unit u);
+uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx);
 
 uw_CallbackFFI_job uw_CallbackFFI_deref(struct uw_context *ctx, uw_CallbackFFI_jobref jr);
 uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackFFI_jobref jr);
@@ -58,6 +58,8 @@ uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_
 uw_Basis_unit uw_CallbackFFI_executeSync(
   struct uw_context *ctx,
   uw_CallbackFFI_job j);
+
+uw_Basis_unit uw_CallbackFFI_limitActive(struct uw_context *ctx, uw_Basis_int l);
 
 #ifdef __cplusplus
 } // extern "C"

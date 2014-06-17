@@ -65,11 +65,22 @@ typedef std::mutex mutex;
 typedef std::atomic<int> atomic;
 typedef long int jkey;
 
+
+
 struct job {
 
   friend struct notifiers;
 
-  static atomic njobs;
+  class atomic_counter {
+    static int cnt;
+    static std::mutex m;
+    std::unique_lock<std::mutex> l;
+  public:
+    atomic_counter() : l(m) {
+    }
+
+    int& get() { return cnt; }
+  };
 
   job(jkey _key, const string &_cmd, int _bufsize) :
 		  key(_key), cmd(_cmd) {
@@ -82,11 +93,13 @@ struct job {
     cleanup_flag = 0;
     cmd_and_args = cmd;
 
-    dprintf("Hello job #%d (cnt %d)\n", key, int(njobs++));
+    atomic_counter c;
+    dprintf("Hello job #%d (cnt %d)\n", key, c.get()++);
   }
 
   ~job() {
-    dprintf("Bye-bye job #%d (cnt %d)\n", key, int(--njobs));
+    atomic_counter c;
+    dprintf("Bye-bye job #%d (cnt %d)\n", key, c.get()--);
   }
 
   jkey key;
@@ -137,7 +150,8 @@ struct job {
 
 };
 
-atomic job::njobs;
+int job::atomic_counter::cnt = 0;
+mutex job::atomic_counter::m;
 
 typedef std::shared_ptr<job> jptr;
 
@@ -154,7 +168,7 @@ private:
   jptr j;
 };
 
-/*{{{ execute */
+/*{{{ Execute function */
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
 static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
@@ -401,7 +415,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 }
 /*}}}*/
 
-
+/*{{{ Notifier threads */
 class notifiers {
 
   typedef std::pair<jptr, string> jpair;
@@ -584,7 +598,7 @@ std::mutex notifiers::lock::m;
 std::condition_variable notifiers::lock::c;
 notifiers::joblist notifiers::lock::q;
 notifiers::globals notifiers::g;
-
+/*}}}*/
 
 class jobset {
 
@@ -655,6 +669,8 @@ uw_Basis_unit uw_CallbackFFI_initialize(
   return 0;
 }
 
+static char UWCB_LIMIT[] = "UWCB_LIMIT\0";
+
 uw_CallbackFFI_job uw_CallbackFFI_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
@@ -662,6 +678,17 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   uw_Basis_int jr)
 {
   jptr* pp;
+
+  int limit = (long int)uw_get_global(ctx, UWCB_LIMIT);
+  if(limit > 0) {
+    bool fail;
+    { job::atomic_counter c;
+      fail = c.get() > limit-1;
+    }
+    if(fail) {
+      uw_error(ctx, FATAL, "Job count exceedes limit of %d\n", limit);
+    }
+  }
 
   {
     pp = new jptr(new job(jr, cmd, stdout_sz));
@@ -1032,8 +1059,14 @@ uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_
   return 0;
 }
 
-uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx, uw_Basis_unit u)
+uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx)
 {
-  return job::njobs;
+  job::atomic_counter c;
+  return c.get();
+}
+
+uw_Basis_unit uw_CallbackFFI_limitActive(struct uw_context *ctx, uw_Basis_int l)
+{
+  uw_set_global(ctx, UWCB_LIMIT, (void*)l, NULL);
 }
 

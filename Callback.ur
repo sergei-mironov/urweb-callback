@@ -167,14 +167,10 @@ struct
         r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
         return r.Jobs
 
-  val abortMore limit =
-    n <- CallbackFFI.nactive {};
-    case limit of
-      |0 => return n
-      |_ =>
-        (case n > limit of
-          |False => return n
-          |True => error (<xml>Active jobs limit exceeded: active {[n]} limit {[limit]}</xml>))
+  val abortMore l =
+    CallbackFFI.limitActive l;
+    n <- CallbackFFI.nactive;
+    return n
 
 end
 

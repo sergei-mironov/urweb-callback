@@ -14,7 +14,8 @@ val pushArg : job -> string -> transaction unit
 val run: job -> transaction unit
 val cleanup: job -> transaction unit
 
-val nactive : unit -> transaction int
+val nactive : transaction int
+val limitActive : int -> transaction unit
 
 val tryDeref : jobref -> transaction (option job)
 val deref : jobref -> transaction job
