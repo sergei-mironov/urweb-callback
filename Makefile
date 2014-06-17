@@ -12,44 +12,24 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test8.db ./test/Test8.exe ./test/Test8.sql
+all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql
 .PHONY: lib
 lib: ./Makefile ./lib.urp
-./test/Test8.db: ./Makefile ./test/Test8.exe ./test/Test8.sql
-	dropdb --if-exists Test8
-	createdb Test8
-	psql -f ./test/Test8.sql Test8
-	touch ./test/Test8.db
-./test/Test6.db: ./Makefile ./test/Test6.exe ./test/Test6.sql
-	dropdb --if-exists Test6
-	createdb Test6
-	psql -f ./test/Test6.sql Test6
-	touch ./test/Test6.db
-./test/Test5.db: ./Makefile ./test/Test5.exe ./test/Test5.sql
-	dropdb --if-exists Test5
-	createdb Test5
-	psql -f ./test/Test5.sql Test5
-	touch ./test/Test5.db
-./test/Test4.db: ./Makefile ./test/Test4.exe ./test/Test4.sql
-	dropdb --if-exists Test4
-	createdb Test4
-	psql -f ./test/Test4.sql Test4
-	touch ./test/Test4.db
-./test/Test3.db: ./Makefile ./test/Test3.exe ./test/Test3.sql
-	dropdb --if-exists Test3
-	createdb Test3
-	psql -f ./test/Test3.sql Test3
-	touch ./test/Test3.db
-./test/Test2.db: ./Makefile ./test/Test2.exe ./test/Test2.sql
-	dropdb --if-exists Test2
-	createdb Test2
-	psql -f ./test/Test2.sql Test2
-	touch ./test/Test2.db
-./test/Test1.db: ./Makefile ./test/Test1.exe ./test/Test1.sql
-	dropdb --if-exists Test1
-	createdb Test1
-	psql -f ./test/Test1.sql Test1
-	touch ./test/Test1.db
+./test2/Stress.db: ./Makefile ./test2/Stress.exe ./test2/Stress.sql
+	dropdb --if-exists Stress
+	createdb Stress
+	psql -f ./test2/Stress.sql Stress
+	touch ./test2/Stress.db
+./test2/Stdout.db: ./Makefile ./test2/Stdout.exe ./test2/Stdout.sql
+	dropdb --if-exists Stdout
+	createdb Stdout
+	psql -f ./test2/Stdout.sql Stdout
+	touch ./test2/Stdout.db
+./test2/Simple1.db: ./Makefile ./test2/Simple1.exe ./test2/Simple1.sql
+	dropdb --if-exists Simple1
+	createdb Simple1
+	psql -f ./test2/Simple1.sql Simple1
+	touch ./test2/Simple1.db
 ./test/Stress.db: ./Makefile ./test/Stress.exe ./test/Stress.sql
 	dropdb --if-exists Stress
 	createdb Stress
@@ -61,163 +41,35 @@ lib: ./Makefile ./lib.urp
 	psql -f ./demo/Demo.sql Demo
 	touch ./demo/Demo.db
 ./demo/Demo.exe: .fix-multy1
-./demo/Demo.urp: ./Makefile ./demo/Demo.ur ./demo/Demo.urs ./lib.urp .cake3/tmp9
-	cat .cake3/tmp9 > ./demo/Demo.urp
-.cake3/tmp9: ./Makefile
-	-rm -rf .cake3/tmp9
-	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp9
-	echo 'allow mime text/javascript' >> .cake3/tmp9
-	echo 'allow mime text/css' >> .cake3/tmp9
-	echo 'allow mime image/jpeg' >> .cake3/tmp9
-	echo 'allow mime image/png' >> .cake3/tmp9
-	echo 'allow mime image/gif' >> .cake3/tmp9
-	echo 'database dbname=Demo' >> .cake3/tmp9
-	echo 'safeGet Demo/main' >> .cake3/tmp9
-	echo 'safeGet Demo/job_monitor' >> .cake3/tmp9
-	echo 'safeGet Demo/src_monitor' >> .cake3/tmp9
-	echo 'safeGet Demo/job_start' >> .cake3/tmp9
-	echo 'safeGet Demo/C/callback' >> .cake3/tmp9
-	echo 'safeGet Demo/Find/C/callback' >> .cake3/tmp9
-	echo 'safeGet Demo/Cat/C/callback' >> .cake3/tmp9
-	echo 'safeGet Demo/viewsrc' >> .cake3/tmp9
-	echo 'safeGet Demo/status' >> .cake3/tmp9
-	echo 'sql .././demo/Demo.sql' >> .cake3/tmp9
-	echo 'library ../.' >> .cake3/tmp9
-	echo '' >> .cake3/tmp9
-	echo '$$/list' >> .cake3/tmp9
-	echo '$$/string' >> .cake3/tmp9
-	echo '.././demo/Demo' >> .cake3/tmp9
-./test/Test8.exe: .fix-multy9
-./test/Test8.urp: ./Makefile ./lib.urp ./test/Test8.ur ./test/Test8.urs .cake3/tmp8
-	cat .cake3/tmp8 > ./test/Test8.urp
-.cake3/tmp8: ./Makefile
-	-rm -rf .cake3/tmp8
-	echo 'debug' >> .cake3/tmp8
-	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp8
-	echo 'allow mime text/javascript' >> .cake3/tmp8
-	echo 'allow mime text/css' >> .cake3/tmp8
-	echo 'allow mime image/jpeg' >> .cake3/tmp8
-	echo 'allow mime image/png' >> .cake3/tmp8
-	echo 'allow mime image/gif' >> .cake3/tmp8
-	echo 'database dbname=Test8' >> .cake3/tmp8
-	echo 'safeGet Test8/main' >> .cake3/tmp8
-	echo 'safeGet Test8/job_monitor' >> .cake3/tmp8
-	echo 'safeGet Test8/src_monitor' >> .cake3/tmp8
-	echo 'safeGet Test8/job_start' >> .cake3/tmp8
-	echo 'safeGet Test8/finished' >> .cake3/tmp8
-	echo 'safeGet Test8/cleanup' >> .cake3/tmp8
-	echo 'safeGet Test8/monitor' >> .cake3/tmp8
-	echo 'safeGet Test8/run' >> .cake3/tmp8
-	echo 'safeGet Test8/C/callback' >> .cake3/tmp8
-	echo 'safeGet Test8/Find/C/callback' >> .cake3/tmp8
-	echo 'safeGet Test8/Cat/C/callback' >> .cake3/tmp8
-	echo 'safeGet Test8/viewsrc' >> .cake3/tmp8
-	echo 'safeGet Test8/status' >> .cake3/tmp8
-	echo 'sql .././test/Test8.sql' >> .cake3/tmp8
-	echo 'library ../.' >> .cake3/tmp8
-	echo '' >> .cake3/tmp8
-	echo '$$/list' >> .cake3/tmp8
-	echo '$$/string' >> .cake3/tmp8
-	echo '.././test/Test8' >> .cake3/tmp8
-./test/Test6.exe: .fix-multy8
-./test/Test6.urp: ./Makefile ./lib.urp ./test/Test6.ur ./test/Test6.urs .cake3/tmp7
-	cat .cake3/tmp7 > ./test/Test6.urp
-.cake3/tmp7: ./Makefile
-	-rm -rf .cake3/tmp7
-	echo 'debug' >> .cake3/tmp7
-	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp7
-	echo 'allow mime text/javascript' >> .cake3/tmp7
-	echo 'allow mime text/css' >> .cake3/tmp7
-	echo 'allow mime image/jpeg' >> .cake3/tmp7
-	echo 'allow mime image/png' >> .cake3/tmp7
-	echo 'allow mime image/gif' >> .cake3/tmp7
-	echo 'database dbname=Test6' >> .cake3/tmp7
-	echo 'safeGet Test6/main' >> .cake3/tmp7
-	echo 'safeGet Test6/job_monitor' >> .cake3/tmp7
-	echo 'safeGet Test6/src_monitor' >> .cake3/tmp7
-	echo 'safeGet Test6/job_start' >> .cake3/tmp7
-	echo 'safeGet Test6/finished' >> .cake3/tmp7
-	echo 'safeGet Test6/cleanup' >> .cake3/tmp7
-	echo 'safeGet Test6/monitor' >> .cake3/tmp7
-	echo 'safeGet Test6/run' >> .cake3/tmp7
-	echo 'safeGet Test6/C/callback' >> .cake3/tmp7
-	echo 'safeGet Test6/Find/C/callback' >> .cake3/tmp7
-	echo 'safeGet Test6/Cat/C/callback' >> .cake3/tmp7
-	echo 'safeGet Test6/viewsrc' >> .cake3/tmp7
-	echo 'safeGet Test6/status' >> .cake3/tmp7
-	echo 'sql .././test/Test6.sql' >> .cake3/tmp7
-	echo 'library ../.' >> .cake3/tmp7
-	echo '' >> .cake3/tmp7
-	echo '$$/list' >> .cake3/tmp7
-	echo '$$/string' >> .cake3/tmp7
-	echo '.././test/Test6' >> .cake3/tmp7
-./test/Test5.exe: .fix-multy7
-./test/Test5.urp: ./Makefile ./lib.urp ./test/Test5.ur ./test/Test5.urs .cake3/tmp6
-	cat .cake3/tmp6 > ./test/Test5.urp
-.cake3/tmp6: ./Makefile
-	-rm -rf .cake3/tmp6
-	echo 'debug' >> .cake3/tmp6
-	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp6
-	echo 'allow mime text/javascript' >> .cake3/tmp6
-	echo 'allow mime text/css' >> .cake3/tmp6
-	echo 'allow mime image/jpeg' >> .cake3/tmp6
-	echo 'allow mime image/png' >> .cake3/tmp6
-	echo 'allow mime image/gif' >> .cake3/tmp6
-	echo 'database dbname=Test5' >> .cake3/tmp6
-	echo 'safeGet Test5/main' >> .cake3/tmp6
-	echo 'safeGet Test5/job_monitor' >> .cake3/tmp6
-	echo 'safeGet Test5/src_monitor' >> .cake3/tmp6
-	echo 'safeGet Test5/job_start' >> .cake3/tmp6
-	echo 'safeGet Test5/finished' >> .cake3/tmp6
-	echo 'safeGet Test5/cleanup' >> .cake3/tmp6
-	echo 'safeGet Test5/monitor' >> .cake3/tmp6
-	echo 'safeGet Test5/run' >> .cake3/tmp6
-	echo 'safeGet Test5/C/callback' >> .cake3/tmp6
-	echo 'safeGet Test5/Find/C/callback' >> .cake3/tmp6
-	echo 'safeGet Test5/Cat/C/callback' >> .cake3/tmp6
-	echo 'safeGet Test5/viewsrc' >> .cake3/tmp6
-	echo 'safeGet Test5/status' >> .cake3/tmp6
-	echo 'sql .././test/Test5.sql' >> .cake3/tmp6
-	echo 'library ../.' >> .cake3/tmp6
-	echo '' >> .cake3/tmp6
-	echo '$$/list' >> .cake3/tmp6
-	echo '$$/string' >> .cake3/tmp6
-	echo '.././test/Test5' >> .cake3/tmp6
-./test/Test4.exe: .fix-multy6
-./test/Test4.urp: ./Makefile ./lib.urp ./test/Test4.ur ./test/Test4.urs .cake3/tmp5
-	cat .cake3/tmp5 > ./test/Test4.urp
+./demo/Demo.urp: ./Makefile ./demo/Demo.ur ./demo/Demo.urs ./lib.urp .cake3/tmp5
+	cat .cake3/tmp5 > ./demo/Demo.urp
 .cake3/tmp5: ./Makefile
 	-rm -rf .cake3/tmp5
-	echo 'debug' >> .cake3/tmp5
 	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp5
 	echo 'allow mime text/javascript' >> .cake3/tmp5
 	echo 'allow mime text/css' >> .cake3/tmp5
 	echo 'allow mime image/jpeg' >> .cake3/tmp5
 	echo 'allow mime image/png' >> .cake3/tmp5
 	echo 'allow mime image/gif' >> .cake3/tmp5
-	echo 'database dbname=Test4' >> .cake3/tmp5
-	echo 'safeGet Test4/main' >> .cake3/tmp5
-	echo 'safeGet Test4/job_monitor' >> .cake3/tmp5
-	echo 'safeGet Test4/src_monitor' >> .cake3/tmp5
-	echo 'safeGet Test4/job_start' >> .cake3/tmp5
-	echo 'safeGet Test4/finished' >> .cake3/tmp5
-	echo 'safeGet Test4/cleanup' >> .cake3/tmp5
-	echo 'safeGet Test4/monitor' >> .cake3/tmp5
-	echo 'safeGet Test4/run' >> .cake3/tmp5
-	echo 'safeGet Test4/C/callback' >> .cake3/tmp5
-	echo 'safeGet Test4/Find/C/callback' >> .cake3/tmp5
-	echo 'safeGet Test4/Cat/C/callback' >> .cake3/tmp5
-	echo 'safeGet Test4/viewsrc' >> .cake3/tmp5
-	echo 'safeGet Test4/status' >> .cake3/tmp5
-	echo 'sql .././test/Test4.sql' >> .cake3/tmp5
+	echo 'database dbname=Demo' >> .cake3/tmp5
+	echo 'safeGet Demo/main' >> .cake3/tmp5
+	echo 'safeGet Demo/job_monitor' >> .cake3/tmp5
+	echo 'safeGet Demo/src_monitor' >> .cake3/tmp5
+	echo 'safeGet Demo/job_start' >> .cake3/tmp5
+	echo 'safeGet Demo/C/callback' >> .cake3/tmp5
+	echo 'safeGet Demo/Find/C/callback' >> .cake3/tmp5
+	echo 'safeGet Demo/Cat/C/callback' >> .cake3/tmp5
+	echo 'safeGet Demo/viewsrc' >> .cake3/tmp5
+	echo 'safeGet Demo/status' >> .cake3/tmp5
+	echo 'sql .././demo/Demo.sql' >> .cake3/tmp5
 	echo 'library ../.' >> .cake3/tmp5
 	echo '' >> .cake3/tmp5
 	echo '$$/list' >> .cake3/tmp5
 	echo '$$/string' >> .cake3/tmp5
-	echo '.././test/Test4' >> .cake3/tmp5
-./test/Test3.exe: .fix-multy5
-./test/Test3.urp: ./Makefile ./lib.urp ./test/Test3.ur ./test/Test3.urs .cake3/tmp4
-	cat .cake3/tmp4 > ./test/Test3.urp
+	echo '.././demo/Demo' >> .cake3/tmp5
+./test2/Stress.exe: .fix-multy5
+./test2/Stress.urp: ./Makefile ./lib.urp ./test2/Stress.ur ./test2/Templ.ur .cake3/tmp4
+	cat .cake3/tmp4 > ./test2/Stress.urp
 .cake3/tmp4: ./Makefile
 	-rm -rf .cake3/tmp4
 	echo 'debug' >> .cake3/tmp4
@@ -227,29 +79,32 @@ lib: ./Makefile ./lib.urp
 	echo 'allow mime image/jpeg' >> .cake3/tmp4
 	echo 'allow mime image/png' >> .cake3/tmp4
 	echo 'allow mime image/gif' >> .cake3/tmp4
-	echo 'database dbname=Test3' >> .cake3/tmp4
-	echo 'safeGet Test3/main' >> .cake3/tmp4
-	echo 'safeGet Test3/job_monitor' >> .cake3/tmp4
-	echo 'safeGet Test3/src_monitor' >> .cake3/tmp4
-	echo 'safeGet Test3/job_start' >> .cake3/tmp4
-	echo 'safeGet Test3/finished' >> .cake3/tmp4
-	echo 'safeGet Test3/cleanup' >> .cake3/tmp4
-	echo 'safeGet Test3/monitor' >> .cake3/tmp4
-	echo 'safeGet Test3/run' >> .cake3/tmp4
-	echo 'safeGet Test3/C/callback' >> .cake3/tmp4
-	echo 'safeGet Test3/Find/C/callback' >> .cake3/tmp4
-	echo 'safeGet Test3/Cat/C/callback' >> .cake3/tmp4
-	echo 'safeGet Test3/viewsrc' >> .cake3/tmp4
-	echo 'safeGet Test3/status' >> .cake3/tmp4
-	echo 'sql .././test/Test3.sql' >> .cake3/tmp4
+	echo 'database dbname=Stress' >> .cake3/tmp4
+	echo 'safeGet Stress/main' >> .cake3/tmp4
+	echo 'safeGet Stress/job_monitor' >> .cake3/tmp4
+	echo 'safeGet Stress/src_monitor' >> .cake3/tmp4
+	echo 'safeGet Stress/job_start' >> .cake3/tmp4
+	echo 'safeGet Stress/finished' >> .cake3/tmp4
+	echo 'safeGet Stress/cleanup' >> .cake3/tmp4
+	echo 'safeGet Stress/monitor' >> .cake3/tmp4
+	echo 'safeGet Stress/run' >> .cake3/tmp4
+	echo 'safeGet Stress/C/callback' >> .cake3/tmp4
+	echo 'safeGet Stress/cnt' >> .cake3/tmp4
+	echo 'safeGet Stress/Find/C/callback' >> .cake3/tmp4
+	echo 'safeGet Stress/Cat/C/callback' >> .cake3/tmp4
+	echo 'safeGet Stress/viewsrc' >> .cake3/tmp4
+	echo 'safeGet Stress/status' >> .cake3/tmp4
+	echo 'safeGet Stress/lastline' >> .cake3/tmp4
+	echo 'sql .././test2/Stress.sql' >> .cake3/tmp4
 	echo 'library ../.' >> .cake3/tmp4
 	echo '' >> .cake3/tmp4
 	echo '$$/list' >> .cake3/tmp4
 	echo '$$/string' >> .cake3/tmp4
-	echo '.././test/Test3' >> .cake3/tmp4
-./test/Test2.exe: .fix-multy4
-./test/Test2.urp: ./Makefile ./lib.urp ./test/Test2.ur ./test/Test2.urs .cake3/tmp3
-	cat .cake3/tmp3 > ./test/Test2.urp
+	echo '.././test2/Templ' >> .cake3/tmp4
+	echo '.././test2/Stress' >> .cake3/tmp4
+./test2/Stdout.exe: .fix-multy4
+./test2/Stdout.urp: ./Makefile ./lib.urp ./test2/Stdout.ur ./test2/Templ.ur .cake3/tmp3
+	cat .cake3/tmp3 > ./test2/Stdout.urp
 .cake3/tmp3: ./Makefile
 	-rm -rf .cake3/tmp3
 	echo 'debug' >> .cake3/tmp3
@@ -259,29 +114,32 @@ lib: ./Makefile ./lib.urp
 	echo 'allow mime image/jpeg' >> .cake3/tmp3
 	echo 'allow mime image/png' >> .cake3/tmp3
 	echo 'allow mime image/gif' >> .cake3/tmp3
-	echo 'database dbname=Test2' >> .cake3/tmp3
-	echo 'safeGet Test2/main' >> .cake3/tmp3
-	echo 'safeGet Test2/job_monitor' >> .cake3/tmp3
-	echo 'safeGet Test2/src_monitor' >> .cake3/tmp3
-	echo 'safeGet Test2/job_start' >> .cake3/tmp3
-	echo 'safeGet Test2/finished' >> .cake3/tmp3
-	echo 'safeGet Test2/cleanup' >> .cake3/tmp3
-	echo 'safeGet Test2/monitor' >> .cake3/tmp3
-	echo 'safeGet Test2/run' >> .cake3/tmp3
-	echo 'safeGet Test2/C/callback' >> .cake3/tmp3
-	echo 'safeGet Test2/Find/C/callback' >> .cake3/tmp3
-	echo 'safeGet Test2/Cat/C/callback' >> .cake3/tmp3
-	echo 'safeGet Test2/viewsrc' >> .cake3/tmp3
-	echo 'safeGet Test2/status' >> .cake3/tmp3
-	echo 'sql .././test/Test2.sql' >> .cake3/tmp3
+	echo 'database dbname=Stdout' >> .cake3/tmp3
+	echo 'safeGet Stdout/main' >> .cake3/tmp3
+	echo 'safeGet Stdout/job_monitor' >> .cake3/tmp3
+	echo 'safeGet Stdout/src_monitor' >> .cake3/tmp3
+	echo 'safeGet Stdout/job_start' >> .cake3/tmp3
+	echo 'safeGet Stdout/finished' >> .cake3/tmp3
+	echo 'safeGet Stdout/cleanup' >> .cake3/tmp3
+	echo 'safeGet Stdout/monitor' >> .cake3/tmp3
+	echo 'safeGet Stdout/run' >> .cake3/tmp3
+	echo 'safeGet Stdout/C/callback' >> .cake3/tmp3
+	echo 'safeGet Stdout/cnt' >> .cake3/tmp3
+	echo 'safeGet Stdout/Find/C/callback' >> .cake3/tmp3
+	echo 'safeGet Stdout/Cat/C/callback' >> .cake3/tmp3
+	echo 'safeGet Stdout/viewsrc' >> .cake3/tmp3
+	echo 'safeGet Stdout/status' >> .cake3/tmp3
+	echo 'safeGet Stdout/lastline' >> .cake3/tmp3
+	echo 'sql .././test2/Stdout.sql' >> .cake3/tmp3
 	echo 'library ../.' >> .cake3/tmp3
 	echo '' >> .cake3/tmp3
 	echo '$$/list' >> .cake3/tmp3
 	echo '$$/string' >> .cake3/tmp3
-	echo '.././test/Test2' >> .cake3/tmp3
-./test/Test1.exe: .fix-multy3
-./test/Test1.urp: ./Makefile ./lib.urp ./test/Test1.ur ./test/Test1.urs .cake3/tmp2
-	cat .cake3/tmp2 > ./test/Test1.urp
+	echo '.././test2/Templ' >> .cake3/tmp3
+	echo '.././test2/Stdout' >> .cake3/tmp3
+./test2/Simple1.exe: .fix-multy3
+./test2/Simple1.urp: ./Makefile ./lib.urp ./test2/Simple1.ur ./test2/Templ.ur .cake3/tmp2
+	cat .cake3/tmp2 > ./test2/Simple1.urp
 .cake3/tmp2: ./Makefile
 	-rm -rf .cake3/tmp2
 	echo 'debug' >> .cake3/tmp2
@@ -291,28 +149,31 @@ lib: ./Makefile ./lib.urp
 	echo 'allow mime image/jpeg' >> .cake3/tmp2
 	echo 'allow mime image/png' >> .cake3/tmp2
 	echo 'allow mime image/gif' >> .cake3/tmp2
-	echo 'database dbname=Test1' >> .cake3/tmp2
-	echo 'safeGet Test1/main' >> .cake3/tmp2
-	echo 'safeGet Test1/job_monitor' >> .cake3/tmp2
-	echo 'safeGet Test1/src_monitor' >> .cake3/tmp2
-	echo 'safeGet Test1/job_start' >> .cake3/tmp2
-	echo 'safeGet Test1/finished' >> .cake3/tmp2
-	echo 'safeGet Test1/cleanup' >> .cake3/tmp2
-	echo 'safeGet Test1/monitor' >> .cake3/tmp2
-	echo 'safeGet Test1/run' >> .cake3/tmp2
-	echo 'safeGet Test1/C/callback' >> .cake3/tmp2
-	echo 'safeGet Test1/Find/C/callback' >> .cake3/tmp2
-	echo 'safeGet Test1/Cat/C/callback' >> .cake3/tmp2
-	echo 'safeGet Test1/viewsrc' >> .cake3/tmp2
-	echo 'safeGet Test1/status' >> .cake3/tmp2
-	echo 'sql .././test/Test1.sql' >> .cake3/tmp2
+	echo 'database dbname=Simple1' >> .cake3/tmp2
+	echo 'safeGet Simple1/main' >> .cake3/tmp2
+	echo 'safeGet Simple1/job_monitor' >> .cake3/tmp2
+	echo 'safeGet Simple1/src_monitor' >> .cake3/tmp2
+	echo 'safeGet Simple1/job_start' >> .cake3/tmp2
+	echo 'safeGet Simple1/finished' >> .cake3/tmp2
+	echo 'safeGet Simple1/cleanup' >> .cake3/tmp2
+	echo 'safeGet Simple1/monitor' >> .cake3/tmp2
+	echo 'safeGet Simple1/run' >> .cake3/tmp2
+	echo 'safeGet Simple1/C/callback' >> .cake3/tmp2
+	echo 'safeGet Simple1/cnt' >> .cake3/tmp2
+	echo 'safeGet Simple1/Find/C/callback' >> .cake3/tmp2
+	echo 'safeGet Simple1/Cat/C/callback' >> .cake3/tmp2
+	echo 'safeGet Simple1/viewsrc' >> .cake3/tmp2
+	echo 'safeGet Simple1/status' >> .cake3/tmp2
+	echo 'safeGet Simple1/lastline' >> .cake3/tmp2
+	echo 'sql .././test2/Simple1.sql' >> .cake3/tmp2
 	echo 'library ../.' >> .cake3/tmp2
 	echo '' >> .cake3/tmp2
 	echo '$$/list' >> .cake3/tmp2
 	echo '$$/string' >> .cake3/tmp2
-	echo '.././test/Test1' >> .cake3/tmp2
+	echo '.././test2/Templ' >> .cake3/tmp2
+	echo '.././test2/Simple1' >> .cake3/tmp2
 ./test/Stress.exe: .fix-multy2
-./test/Stress.urp: ./Makefile ./lib.urp ./test/Stress.ur ./test/Stress.urs .cake3/tmp1
+./test/Stress.urp: ./Makefile ./lib.urp ./test/Stress.ur ./test2/Templ.ur .cake3/tmp1
 	cat .cake3/tmp1 > ./test/Stress.urp
 .cake3/tmp1: ./Makefile
 	-rm -rf .cake3/tmp1
@@ -333,15 +194,18 @@ lib: ./Makefile ./lib.urp
 	echo 'safeGet Stress/monitor' >> .cake3/tmp1
 	echo 'safeGet Stress/run' >> .cake3/tmp1
 	echo 'safeGet Stress/C/callback' >> .cake3/tmp1
+	echo 'safeGet Stress/cnt' >> .cake3/tmp1
 	echo 'safeGet Stress/Find/C/callback' >> .cake3/tmp1
 	echo 'safeGet Stress/Cat/C/callback' >> .cake3/tmp1
 	echo 'safeGet Stress/viewsrc' >> .cake3/tmp1
 	echo 'safeGet Stress/status' >> .cake3/tmp1
+	echo 'safeGet Stress/lastline' >> .cake3/tmp1
 	echo 'sql .././test/Stress.sql' >> .cake3/tmp1
 	echo 'library ../.' >> .cake3/tmp1
 	echo '' >> .cake3/tmp1
 	echo '$$/list' >> .cake3/tmp1
 	echo '$$/string' >> .cake3/tmp1
+	echo '.././test2/Templ' >> .cake3/tmp1
 	echo '.././test/Stress' >> .cake3/tmp1
 ./lib.urp: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile .cake3/tmp0
 	cat .cake3/tmp0 > ./lib.urp
@@ -362,13 +226,9 @@ lib: ./Makefile ./lib.urp
 	$(URCPP) -c $(UR_CFLAGS) $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./demo/Demo.sql: .fix-multy1
 ./test/Stress.sql: .fix-multy2
-./test/Test1.sql: .fix-multy3
-./test/Test2.sql: .fix-multy4
-./test/Test3.sql: .fix-multy5
-./test/Test4.sql: .fix-multy6
-./test/Test5.sql: .fix-multy7
-./test/Test6.sql: .fix-multy8
-./test/Test8.sql: .fix-multy9
+./test2/Simple1.sql: .fix-multy3
+./test2/Stdout.sql: .fix-multy4
+./test2/Stress.sql: .fix-multy5
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: ./Makefile ./demo/Demo.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./demo/Demo
@@ -376,26 +236,14 @@ lib: ./Makefile ./lib.urp
 .fix-multy2: ./Makefile ./test/Stress.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Stress
 .INTERMEDIATE: .fix-multy3
-.fix-multy3: ./Makefile ./test/Test1.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test1
+.fix-multy3: ./Makefile ./test2/Simple1.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test2/Simple1
 .INTERMEDIATE: .fix-multy4
-.fix-multy4: ./Makefile ./test/Test2.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test2
+.fix-multy4: ./Makefile ./test2/Stdout.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test2/Stdout
 .INTERMEDIATE: .fix-multy5
-.fix-multy5: ./Makefile ./test/Test3.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test3
-.INTERMEDIATE: .fix-multy6
-.fix-multy6: ./Makefile ./test/Test4.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test4
-.INTERMEDIATE: .fix-multy7
-.fix-multy7: ./Makefile ./test/Test5.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test5
-.INTERMEDIATE: .fix-multy8
-.fix-multy8: ./Makefile ./test/Test6.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test6
-.INTERMEDIATE: .fix-multy9
-.fix-multy9: ./Makefile ./test/Test8.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Test8
+.fix-multy5: ./Makefile ./test2/Stress.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./test2/Stress
 $(call GUARD,URCPP):
 	rm -f .cake3/GUARD_URCPP_*
 	touch $@
@@ -421,20 +269,12 @@ ifneq ($(MAKECMDGOALS),clean)
 all: .fix-multy1
 .PHONY: lib
 lib: .fix-multy1
-.PHONY: ./test/Test8.db
-./test/Test8.db: .fix-multy1
-.PHONY: ./test/Test6.db
-./test/Test6.db: .fix-multy1
-.PHONY: ./test/Test5.db
-./test/Test5.db: .fix-multy1
-.PHONY: ./test/Test4.db
-./test/Test4.db: .fix-multy1
-.PHONY: ./test/Test3.db
-./test/Test3.db: .fix-multy1
-.PHONY: ./test/Test2.db
-./test/Test2.db: .fix-multy1
-.PHONY: ./test/Test1.db
-./test/Test1.db: .fix-multy1
+.PHONY: ./test2/Stress.db
+./test2/Stress.db: .fix-multy1
+.PHONY: ./test2/Stdout.db
+./test2/Stdout.db: .fix-multy1
+.PHONY: ./test2/Simple1.db
+./test2/Simple1.db: .fix-multy1
 .PHONY: ./test/Stress.db
 ./test/Stress.db: .fix-multy1
 .PHONY: ./demo/Demo.db
@@ -443,48 +283,24 @@ lib: .fix-multy1
 ./demo/Demo.exe: .fix-multy1
 .PHONY: ./demo/Demo.urp
 ./demo/Demo.urp: .fix-multy1
-.PHONY: .cake3/tmp9
-.cake3/tmp9: .fix-multy1
-.PHONY: ./test/Test8.exe
-./test/Test8.exe: .fix-multy1
-.PHONY: ./test/Test8.urp
-./test/Test8.urp: .fix-multy1
-.PHONY: .cake3/tmp8
-.cake3/tmp8: .fix-multy1
-.PHONY: ./test/Test6.exe
-./test/Test6.exe: .fix-multy1
-.PHONY: ./test/Test6.urp
-./test/Test6.urp: .fix-multy1
-.PHONY: .cake3/tmp7
-.cake3/tmp7: .fix-multy1
-.PHONY: ./test/Test5.exe
-./test/Test5.exe: .fix-multy1
-.PHONY: ./test/Test5.urp
-./test/Test5.urp: .fix-multy1
-.PHONY: .cake3/tmp6
-.cake3/tmp6: .fix-multy1
-.PHONY: ./test/Test4.exe
-./test/Test4.exe: .fix-multy1
-.PHONY: ./test/Test4.urp
-./test/Test4.urp: .fix-multy1
 .PHONY: .cake3/tmp5
 .cake3/tmp5: .fix-multy1
-.PHONY: ./test/Test3.exe
-./test/Test3.exe: .fix-multy1
-.PHONY: ./test/Test3.urp
-./test/Test3.urp: .fix-multy1
+.PHONY: ./test2/Stress.exe
+./test2/Stress.exe: .fix-multy1
+.PHONY: ./test2/Stress.urp
+./test2/Stress.urp: .fix-multy1
 .PHONY: .cake3/tmp4
 .cake3/tmp4: .fix-multy1
-.PHONY: ./test/Test2.exe
-./test/Test2.exe: .fix-multy1
-.PHONY: ./test/Test2.urp
-./test/Test2.urp: .fix-multy1
+.PHONY: ./test2/Stdout.exe
+./test2/Stdout.exe: .fix-multy1
+.PHONY: ./test2/Stdout.urp
+./test2/Stdout.urp: .fix-multy1
 .PHONY: .cake3/tmp3
 .cake3/tmp3: .fix-multy1
-.PHONY: ./test/Test1.exe
-./test/Test1.exe: .fix-multy1
-.PHONY: ./test/Test1.urp
-./test/Test1.urp: .fix-multy1
+.PHONY: ./test2/Simple1.exe
+./test2/Simple1.exe: .fix-multy1
+.PHONY: ./test2/Simple1.urp
+./test2/Simple1.urp: .fix-multy1
 .PHONY: .cake3/tmp2
 .cake3/tmp2: .fix-multy1
 .PHONY: ./test/Stress.exe
@@ -503,20 +319,12 @@ lib: .fix-multy1
 ./demo/Demo.sql: .fix-multy1
 .PHONY: ./test/Stress.sql
 ./test/Stress.sql: .fix-multy1
-.PHONY: ./test/Test1.sql
-./test/Test1.sql: .fix-multy1
-.PHONY: ./test/Test2.sql
-./test/Test2.sql: .fix-multy1
-.PHONY: ./test/Test3.sql
-./test/Test3.sql: .fix-multy1
-.PHONY: ./test/Test4.sql
-./test/Test4.sql: .fix-multy1
-.PHONY: ./test/Test5.sql
-./test/Test5.sql: .fix-multy1
-.PHONY: ./test/Test6.sql
-./test/Test6.sql: .fix-multy1
-.PHONY: ./test/Test8.sql
-./test/Test8.sql: .fix-multy1
+.PHONY: ./test2/Simple1.sql
+./test2/Simple1.sql: .fix-multy1
+.PHONY: ./test2/Stdout.sql
+./test2/Stdout.sql: .fix-multy1
+.PHONY: ./test2/Stress.sql
+./test2/Stress.sql: .fix-multy1
 .INTERMEDIATE: .fix-multy1
 .fix-multy1: 
 	-mkdir .cake3
@@ -525,7 +333,7 @@ lib: .fix-multy1
 endif
 .PHONY: clean
 clean: 
-	-rm ./CallbackFFI.o ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./demo/Demo.urp ./lib.urp ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Stress.urp ./test/Test1.db ./test/Test1.exe ./test/Test1.sql ./test/Test1.urp ./test/Test2.db ./test/Test2.exe ./test/Test2.sql ./test/Test2.urp ./test/Test3.db ./test/Test3.exe ./test/Test3.sql ./test/Test3.urp ./test/Test4.db ./test/Test4.exe ./test/Test4.sql ./test/Test4.urp ./test/Test5.db ./test/Test5.exe ./test/Test5.sql ./test/Test5.urp ./test/Test6.db ./test/Test6.exe ./test/Test6.sql ./test/Test6.urp ./test/Test8.db ./test/Test8.exe ./test/Test8.sql ./test/Test8.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5 .cake3/tmp6 .cake3/tmp7 .cake3/tmp8 .cake3/tmp9
+	-rm ./CallbackFFI.o ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./demo/Demo.urp ./lib.urp ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Stress.urp ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Simple1.urp ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stdout.urp ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql ./test2/Stress.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5
 	-rm -rf .cake3
 
 endif

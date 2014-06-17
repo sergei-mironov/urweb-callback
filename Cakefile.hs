@@ -19,18 +19,21 @@ project = do
     ur (pair "CallbackNotify.ur")
     ur (pair "CallbackNotify2.ur")
 
-  let tests = [ "test/Stress.urp"
-              , "test/Test1.urp"
-              , "test/Test2.urp"
-              , "test/Test3.urp"
-              , "test/Test4.urp"
-              , "test/Test5.urp"
-              , "test/Test6.urp"
-              , "test/Test8.urp"
+  let tests = [ "test/Stress.ur"
+              , "test2/Simple1.ur"
+              , "test2/Stdout.ur"
+              , "test2/Stress.ur"
+              -- , "test/Test1.urp"
+              -- , "test/Test2.urp"
+              -- , "test/Test3.urp"
+              -- , "test/Test4.urp"
+              -- , "test/Test5.urp"
+              -- , "test/Test6.urp"
+              -- , "test/Test8.urp"
               ]
 
   ts <- forM tests $ \t -> do
-    uwapp "-dbms postgres" t $ do
+    uwapp "-dbms postgres" (t.="urp") $ do
       debug
       allow url "http://code.jquery.com/ui/1.10.3/jquery-ui.js";
       allow mime "text/javascript";
@@ -48,15 +51,18 @@ project = do
       safeGet (t.="ur") "monitor"
       safeGet (t.="ur") "run"
       safeGet (t.="ur") "C/callback"
+      safeGet (t.="ur") "cnt"
       safeGet (t.="ur") "Find/C/callback"
       safeGet (t.="ur") "Cat/C/callback"
       safeGet (t.="ur") "viewsrc"
       safeGet (t.="ur") "status"
+      safeGet (t.="ur") "lastline"
       sql (t.="sql")
       library l
       ur (sys "list")
       ur (sys "string")
-      ur (pair (t.="ur"))
+      ur (single "test2/Templ.ur")
+      ur (single t)
 
 
   d <- uwapp "-dbms postgres" "demo/Demo.urp" $ do
