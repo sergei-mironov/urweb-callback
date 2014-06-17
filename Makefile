@@ -95,6 +95,7 @@ lib: ./Makefile ./lib.urp
 	echo 'safeGet Stress/viewsrc' >> .cake3/tmp4
 	echo 'safeGet Stress/status' >> .cake3/tmp4
 	echo 'safeGet Stress/lastline' >> .cake3/tmp4
+	echo 'safeGet Stress/longrunning' >> .cake3/tmp4
 	echo 'sql .././test2/Stress.sql' >> .cake3/tmp4
 	echo 'library ../.' >> .cake3/tmp4
 	echo '' >> .cake3/tmp4
@@ -130,6 +131,7 @@ lib: ./Makefile ./lib.urp
 	echo 'safeGet Stdout/viewsrc' >> .cake3/tmp3
 	echo 'safeGet Stdout/status' >> .cake3/tmp3
 	echo 'safeGet Stdout/lastline' >> .cake3/tmp3
+	echo 'safeGet Stdout/longrunning' >> .cake3/tmp3
 	echo 'sql .././test2/Stdout.sql' >> .cake3/tmp3
 	echo 'library ../.' >> .cake3/tmp3
 	echo '' >> .cake3/tmp3
@@ -165,6 +167,7 @@ lib: ./Makefile ./lib.urp
 	echo 'safeGet Simple1/viewsrc' >> .cake3/tmp2
 	echo 'safeGet Simple1/status' >> .cake3/tmp2
 	echo 'safeGet Simple1/lastline' >> .cake3/tmp2
+	echo 'safeGet Simple1/longrunning' >> .cake3/tmp2
 	echo 'sql .././test2/Simple1.sql' >> .cake3/tmp2
 	echo 'library ../.' >> .cake3/tmp2
 	echo '' >> .cake3/tmp2
@@ -200,6 +203,7 @@ lib: ./Makefile ./lib.urp
 	echo 'safeGet Stress/viewsrc' >> .cake3/tmp1
 	echo 'safeGet Stress/status' >> .cake3/tmp1
 	echo 'safeGet Stress/lastline' >> .cake3/tmp1
+	echo 'safeGet Stress/longrunning' >> .cake3/tmp1
 	echo 'sql .././test/Stress.sql' >> .cake3/tmp1
 	echo 'library ../.' >> .cake3/tmp1
 	echo '' >> .cake3/tmp1

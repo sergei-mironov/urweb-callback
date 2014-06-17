@@ -37,6 +37,9 @@ begin() {
 }
 
 {
+
+
+
 begin "./Simple1.exe"
 
   KEY=787
@@ -53,9 +56,10 @@ begin "./Simple1.exe"
   done
 
   msg "Checking job count (ps fax)"
+  ps fax -o pid,ppid,args | tolog grep $PID
   nsleep=`ps fax -o pid,ppid,args | grep $PID | grep $KEY | wc -l`
   if test "$nsleep" != "20" ;then
-    die "Invalid number of sleep threads ($nsleep)"
+    die "Invalid number of sleep childs ($nsleep)"
   fi
 
   msg "Checking job count (API)"
@@ -82,6 +86,11 @@ end
 
 begin "./Stress.exe"
 
+  msg "Starting stress-test with 1 long-running job"
+
+  KEY=2023
+  tolog wget $WGET_ARGS $U/Stress/longrunning/$KEY
+
   for i in `seq 1 1 2000` ; do
     case $i in
       *500|*000) msg "Creating session #$i" ;;
@@ -89,13 +98,14 @@ begin "./Stress.exe"
     (
       tolog wget $WGET_ARGS $U/Stress/main
     ) &
+    sleep 0.01
   done
 
   msg "Done stress testing"
   
   for i in `seq 1 1 20` ; do
 
-    noerr wget $WGET_ARGS $U/Stress/cnt | grep '<body>0</body>' && {
+    noerr wget $WGET_ARGS $U/Stress/cnt | grep '<body>1</body>' && {
       msg "Got zero"
       break;
     }
@@ -106,6 +116,11 @@ begin "./Stress.exe"
       sleep 0.5
     fi
   done
+
+  nsleep=`ps fax -o pid,ppid,args | grep $PID | grep $KEY | wc -l`
+  if test "$nsleep" != "1" ;then
+    die "Invalid number of sleep childs ($nsleep)"
+  fi
 
 end
 

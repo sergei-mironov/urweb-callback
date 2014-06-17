@@ -57,6 +57,7 @@ project = do
       safeGet (t.="ur") "viewsrc"
       safeGet (t.="ur") "status"
       safeGet (t.="ur") "lastline"
+      safeGet (t.="ur") "longrunning"
       sql (t.="sql")
       library l
       ur (sys "list")
