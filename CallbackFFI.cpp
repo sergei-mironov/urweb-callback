@@ -94,12 +94,14 @@ struct job {
     cmd_and_args = cmd;
 
     atomic_counter c;
-    dprintf("Hello job #%d (cnt %d)\n", key, c.get()++);
+    c.get()++;
+    dprintf("Hello job #%d (cnt %d)\n", key, c.get());
   }
 
   ~job() {
     atomic_counter c;
-    dprintf("Bye-bye job #%d (cnt %d)\n", key, c.get()--);
+    c.get()--;
+    dprintf("Bye-bye job #%d (cnt %d)\n", key, c.get());
   }
 
   jkey key;
