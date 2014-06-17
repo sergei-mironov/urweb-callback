@@ -79,7 +79,7 @@ struct job {
     exitcode = -1;
     close_stdin = false;
     thread_started = false;
-    cleanup_called = false;
+    cleanup_flag = 0;
     cmd_and_args = cmd;
 
     dprintf("Hello job #%d (cnt %d)\n", key, int(njobs++));
@@ -109,7 +109,7 @@ struct job {
   int exitcode;
 
   bool close_stdin;
-  bool cleanup_called;
+  int cleanup_flag;
 
   size_t sz_stdout;
   size_t sz_stdin;
@@ -875,13 +875,16 @@ uw_Basis_unit uw_CallbackFFI_run(
 
 uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j_)
 {
-  if(get(j_)->cleanup_called)
+  if(get(j_)->cleanup_flag > 0)
     uw_error(ctx, FATAL, "duplicate cleanup call for job #%d", get(j_)->key);
+
+  get(j_)->cleanup_flag = 1;
 
   void* j = new jptr(get(j_));
 
   uw_register_transactional(ctx, j, NULL, NULL,
     [](void* j_, int) {
+      get(j_)->cleanup_flag--;
       delete ((jptr*)j_);
     });
 
@@ -889,7 +892,7 @@ uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job 
     [](void* j_) {
       jobset s;
       s.remove(get(j_));
-      get(j_)->cleanup_called = true;
+      get(j_)->cleanup_flag++;
     }, NULL , NULL);
 
   return 0;
