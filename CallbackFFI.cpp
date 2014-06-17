@@ -79,6 +79,7 @@ struct job {
     exitcode = -1;
     close_stdin = false;
     thread_started = false;
+    cleanup_called = false;
     cmd_and_args = cmd;
 
     dprintf("Hello job #%d (cnt %d)\n", key, int(njobs++));
@@ -108,6 +109,7 @@ struct job {
   int exitcode;
 
   bool close_stdin;
+  bool cleanup_called;
 
   size_t sz_stdout;
   size_t sz_stdin;
@@ -871,10 +873,11 @@ uw_Basis_unit uw_CallbackFFI_run(
   return 0;
 }
 
-//FIXME: It is an error to call cleanup more than 1 time per transaction. Handle
-//this somehow
 uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j_)
 {
+  if(get(j_)->cleanup_called)
+    uw_error(ctx, FATAL, "duplicate cleanup call for job #%d", get(j_)->key);
+
   void* j = new jptr(get(j_));
 
   uw_register_transactional(ctx, j, NULL, NULL,
@@ -886,6 +889,7 @@ uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job 
     [](void* j_) {
       jobset s;
       s.remove(get(j_));
+      get(j_)->cleanup_called = true;
     }, NULL , NULL);
 
   return 0;
