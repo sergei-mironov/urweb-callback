@@ -1,10 +1,5 @@
 
-con jobrec = [
-    JobRef = int
-  , ExitCode = option int
-  , Cmd = string
-  , Stdout = string
-  ]
+con jobrec = Callback.jobrec
 
 type job = record jobrec
 

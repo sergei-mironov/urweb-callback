@@ -1,13 +1,16 @@
 
-con jobrec = [
-  (* Job reference which may be passed to clients *)
-  JobRef = int,
-  (* Exit code of the job process *)
-  ExitCode = option int,
-  (* Command line of the job *)
-  Cmd = string,
-  (* Stdout of the job (at least stdout_sz bytes) *)
-  Stdout = string]
+con jobrec =
+  [
+    (* Job reference which may be passed to clients *)
+    JobRef = int
+    (* Exit code of the job process *)
+  , ExitCode = option int
+    (* Command line of the job *)
+  , Cmd = string
+    (* Stdout of the job (at least stdout_sz bytes) *)
+  , Stdout = string
+  , ErrRep = string
+  ]
 
 sequence jobrefs
 
@@ -97,13 +100,19 @@ struct
             else
               return (Some e)
           end);
-    return {JobRef=(CallbackFFI.ref j), ExitCode=e, Cmd=(CallbackFFI.cmd j), Stdout=(CallbackFFI.stdout j)}
+    return {
+      JobRef=(CallbackFFI.ref j),
+      ExitCode=e,
+      Cmd=(CallbackFFI.cmd j),
+      Stdout=(CallbackFFI.stdout j),
+      ErrRep=(CallbackFFI.errors j)}
 
   fun callback (jr:jobref) : transaction page =
     j <- CallbackFFI.deref jr;
     ec <- (return (CallbackFFI.exitcode j));
     so <- (return (CallbackFFI.stdout j));
-    dml(UPDATE jobs SET ExitCode = {[Some ec]}, Stdout = {[so]} WHERE JobRef = {[jr]});
+    er <- (return (CallbackFFI.errors j));
+    dml(UPDATE jobs SET ExitCode = {[Some ec]}, Stdout = {[so]}, ErrRep = {[er]} WHERE JobRef = {[jr]});
     mji <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
     case mji of
       |None =>
@@ -128,7 +137,7 @@ struct
     mapM_ (CallbackFFI.pushArg j) ja.Args;
     CallbackFFI.setCompletionCB j (Some (url (callback jr)));
     feed_ j ja.Stdin;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout) VALUES ({[jr]}, {[None]}, {[ja.Cmd]}, ""));
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, "", ""));
     CallbackFFI.run j;
     return {}
 
