@@ -340,7 +340,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
             }
             else {
               jlock _(r);
-              memcpy(&r->buf_stdout[0], &r->buf_stdout[bytes_read], r->buf_stdout.size() - bytes_read);
+              memmove(&r->buf_stdout[0], &r->buf_stdout[bytes_read], r->buf_stdout.size() - bytes_read);
               memcpy(&r->buf_stdout[r->buf_stdout.size() - bytes_read], &devnull[0], bytes_read);
             }
           }
