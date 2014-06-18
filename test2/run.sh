@@ -3,19 +3,32 @@
 msg() { echo "$TEST $@" >&2 ; echo "$TEST $@" ; }
 die() { msg "$@" ; exit 1 ; }
 
-if test "$1" = "fixtw" ; then
-  echo 5 > /proc/sys/net/ipv4/tcp_fin_timeout
-  exit 0
-fi
-
-PORT=8080
+PORT=9090
 U=127.0.0.1:$PORT
 WGET_ARGS="-t 1 -T 3 -O - -S "
 TEST="run.sh:"
+TD=`dirname $0`
 silent() { $@ >/dev/null 2>&1 ; }
 noerr() { $@ 2>/dev/null ; }
 tolog() { $@ 2>&1 ; }
-date > test.log
+
+while test -n "$1" ; do
+  case $1 in
+    fixtw)
+      echo 5 > /proc/sys/net/ipv4/tcp_fin_timeout
+      exit 0
+      ;;
+    -p)
+      PORT=$2
+      shift
+      ;;
+    -h|--help)
+      echo "run.sh [-p PORT] [fixtw]" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
 
 end() {
   silent killall sleep
@@ -25,21 +38,30 @@ end() {
      die "Failed to kill PID $PID"
     unset PID
   fi
+  TEST="run.sh:"
 }
 
 begin() {
   end
   TEST="`basename $1`:"
-  $1 -p $PORT >>test.log 2>&1 &
+  $1 -p $PORT >$1.log 2>&1 &
   PID=$!
   trap end EXIT
   sleep 0.5
 }
 
+#
+# MAIN PART
+#
+
+
+# Force re-creation of the databases
+cd $TD
+rm *db
+make -C .. || die "Make failed"
+
 {
-
-
-
+date
 begin "./Simple1.exe"
 
   KEY=787
@@ -82,6 +104,7 @@ begin "./Stdout.exe"
   msg "Checking lastline"
   noerr wget $WGET_ARGS $U/Stdout/lastline >$L
   tolog grep '<body>bbb</body>' $L || die
+
 end
 
 begin "./Stress.exe"

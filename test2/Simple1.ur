@@ -3,10 +3,7 @@ structure T = Templ
 
 fun monitor (jr:C.jobref) : transaction page = T.template (
   j <- C.get jr;
-  return
-    <xml>
-    ExitCode : {[j.ExitCode]}
-    </xml>)
+  return <xml>ExitCode : {[j.ExitCode]}</xml>)
 
 fun main (i:int) : transaction page = T.template (
   x <- C.abortMore 20;

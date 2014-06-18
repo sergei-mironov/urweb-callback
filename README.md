@@ -132,8 +132,8 @@ starts the shell script which counts from 1 to 5.
 See test/ folder for more examples.
 
 
-Debugging and testing
----------------------
+Debugging
+---------
 
 To enable debug messages, set the UWCB\_DEBUG environment variable to some
 value before runnung the application.
@@ -142,6 +142,17 @@ To run the stress-testing, 1) Start the ./test/Stress.exe 2) Run the ./stress.sh
 from another terminal. 3) Kill the ./test/Stress.exe. There should be no
 'Bye-bye' after the termination. If they are exist, there is a memory leak in
 the code. Please, drop me a message about this.
+
+
+Testing
+-------
+
+./test2 folder contains an automatic test script. To run the tests, do
+
+    $ ./test2/run.sh
+ 
+Upon completion, the script should print SUCCESS to the terminal. See
+./test2/\*log files for testing logs.
 
 Regards,
 Sergey Mironov

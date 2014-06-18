@@ -8,3 +8,4 @@ Cakegen
 *.db
 *.sql
 *.o
+*.log
