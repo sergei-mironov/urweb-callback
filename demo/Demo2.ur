@@ -12,7 +12,7 @@ fun monitor (jr:C.jobref) : transaction page = template (
   s <- source "";
   let
     fun getout jr = j <- C.get jr; return j.Stdout
-    fun loop {} = o <- rpc (getout jr); set s o; sleep 1; loop {}
+    fun loop {} = o <- rpc (getout jr); set s o; sleep 1000; loop {}
   in
     return
       <xml>
