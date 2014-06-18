@@ -9,8 +9,17 @@ fun template (mb:transaction xbody) : transaction page =
     </xml>
 
 fun monitor (jr:C.jobref) : transaction page = template (
-  j <- C.get jr;
-  return <xml><pre>{[j.Stdout]}</pre></xml>)
+  s <- source "";
+  let
+    fun getout jr = j <- C.get jr; return j.Stdout
+    fun loop {} = o <- rpc (getout jr); set s o; sleep 1; loop {}
+  in
+    return
+      <xml>
+        <active code={spawn (loop {}); return <xml/>} />
+        <dyn signal={v<-signal s; return <xml><pre>{[v]}</pre></xml>}/>
+      </xml>
+  end)
 
 fun main {} : transaction page =
   x <- C.abortMore 20;
