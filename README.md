@@ -107,27 +107,18 @@ starts the shell script which counts from 1 to 5.
           <body>{b}</body>
         </xml>
 
-    fun job_monitor (jr:C.jobref) : transaction page = template (
+    fun monitor (jr:C.jobref) : transaction page = T.template (
       j <- C.get jr;
-      return <xml>
-          Job : {[jr]}
-          <br/>
-          ExitCode : {[j.ExitCode]}
-          <br/>
-          Stdout:  {[j.Stdout]}
-        </xml>)
+      return <xml>{[j.Stdout]}</xml>)
 
-    fun job_start {} : transaction page =
-      n <- C.abortMore 20;
-      jr <- C.nextjob {};
-      C.create jr "for i in `seq 1 1 5`; do echo -n $i; sleep 2 ; done" (textBlob "");
-      redirect (url (job_monitor jr))
+    fun main (i:int) : transaction page = T.template (
+      x <- C.abortMore 20;
+      jr <- C.create (C.shellCommand ("sleep " ^ show i));
+      redirect (url (monitor jr)))
 
-    fun main {} : transaction page = template (
-      return
-        <xml>
-          <a link={job_start {}}>Start a sleep job</a>
-        </xml>)
+    fun cnt {} : transaction page = T.template (
+      x <- C.abortMore 20;
+      return <xml>{[x]}</xml>)
 
 See test/ folder for more examples.
 

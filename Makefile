@@ -12,9 +12,12 @@ URCPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 URINCL = -I$(shell urweb -print-cinclude) 
 URVERSION = $(shell urweb -version)
 .PHONY: all
-all: ./Makefile ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql
-.PHONY: lib
-lib: ./Makefile ./lib.urp
+all: ./Makefile ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql
+./demo/Demo2.db: ./Makefile ./demo/Demo2.exe ./demo/Demo2.sql
+	dropdb --if-exists Demo2
+	createdb Demo2
+	psql -f ./demo/Demo2.sql Demo2
+	touch ./demo/Demo2.db
 ./test2/Stress.db: ./Makefile ./test2/Stress.exe ./test2/Stress.sql
 	dropdb --if-exists Stress
 	createdb Stress
@@ -35,38 +38,24 @@ lib: ./Makefile ./lib.urp
 	createdb Stress
 	psql -f ./test/Stress.sql Stress
 	touch ./test/Stress.db
-./demo/Demo.db: ./Makefile ./demo/Demo.exe ./demo/Demo.sql
-	dropdb --if-exists Demo
-	createdb Demo
-	psql -f ./demo/Demo.sql Demo
-	touch ./demo/Demo.db
-./demo/Demo.exe: .fix-multy1
-./demo/Demo.urp: ./Makefile ./demo/Demo.ur ./demo/Demo.urs ./lib.urp .cake3/tmp5
-	cat .cake3/tmp5 > ./demo/Demo.urp
+.PHONY: lib
+lib: ./Makefile ./lib.urp
+.PHONY: demo
+demo: ./Makefile ./demo/Demo2.db
+./demo/Demo2.exe: .fix-multy1
+./demo/Demo2.urp: ./Makefile ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp .cake3/tmp5
+	cat .cake3/tmp5 > ./demo/Demo2.urp
 .cake3/tmp5: ./Makefile
 	-rm -rf .cake3/tmp5
-	echo 'allow url http://code.jquery.com/ui/1.10.3/jquery-ui.js' >> .cake3/tmp5
-	echo 'allow mime text/javascript' >> .cake3/tmp5
-	echo 'allow mime text/css' >> .cake3/tmp5
-	echo 'allow mime image/jpeg' >> .cake3/tmp5
-	echo 'allow mime image/png' >> .cake3/tmp5
-	echo 'allow mime image/gif' >> .cake3/tmp5
-	echo 'database dbname=Demo' >> .cake3/tmp5
-	echo 'safeGet Demo/main' >> .cake3/tmp5
-	echo 'safeGet Demo/job_monitor' >> .cake3/tmp5
-	echo 'safeGet Demo/src_monitor' >> .cake3/tmp5
-	echo 'safeGet Demo/job_start' >> .cake3/tmp5
-	echo 'safeGet Demo/C/callback' >> .cake3/tmp5
-	echo 'safeGet Demo/Find/C/callback' >> .cake3/tmp5
-	echo 'safeGet Demo/Cat/C/callback' >> .cake3/tmp5
-	echo 'safeGet Demo/viewsrc' >> .cake3/tmp5
-	echo 'safeGet Demo/status' >> .cake3/tmp5
-	echo 'sql .././demo/Demo.sql' >> .cake3/tmp5
+	echo 'database dbname=Demo2' >> .cake3/tmp5
+	echo 'safeGet Demo2/main' >> .cake3/tmp5
+	echo 'safeGet Demo2/monitor' >> .cake3/tmp5
+	echo 'sql .././demo/Demo2.sql' >> .cake3/tmp5
 	echo 'library ../.' >> .cake3/tmp5
 	echo '' >> .cake3/tmp5
 	echo '$$/list' >> .cake3/tmp5
 	echo '$$/string' >> .cake3/tmp5
-	echo '.././demo/Demo' >> .cake3/tmp5
+	echo '.././demo/Demo2' >> .cake3/tmp5
 ./test2/Stress.exe: .fix-multy5
 ./test2/Stress.urp: ./Makefile ./lib.urp ./test2/Stress.ur ./test2/Templ.ur .cake3/tmp4
 	cat .cake3/tmp4 > ./test2/Stress.urp
@@ -228,14 +217,14 @@ lib: ./Makefile ./lib.urp
 	echo './CallbackNotify2' >> .cake3/tmp0
 ./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
 	$(URCPP) -c $(UR_CFLAGS) $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
-./demo/Demo.sql: .fix-multy1
+./demo/Demo2.sql: .fix-multy1
 ./test/Stress.sql: .fix-multy2
 ./test2/Simple1.sql: .fix-multy3
 ./test2/Stdout.sql: .fix-multy4
 ./test2/Stress.sql: .fix-multy5
 .INTERMEDIATE: .fix-multy1
-.fix-multy1: ./Makefile ./demo/Demo.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./demo/Demo
+.fix-multy1: ./Makefile ./demo/Demo2.urp $(call GUARD,URVERSION)
+	urweb -dbms postgres ./demo/Demo2
 .INTERMEDIATE: .fix-multy2
 .fix-multy2: ./Makefile ./test/Stress.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Stress
@@ -271,8 +260,8 @@ ifneq ($(MAKECMDGOALS),clean)
 
 .PHONY: all
 all: .fix-multy1
-.PHONY: lib
-lib: .fix-multy1
+.PHONY: ./demo/Demo2.db
+./demo/Demo2.db: .fix-multy1
 .PHONY: ./test2/Stress.db
 ./test2/Stress.db: .fix-multy1
 .PHONY: ./test2/Stdout.db
@@ -281,12 +270,14 @@ lib: .fix-multy1
 ./test2/Simple1.db: .fix-multy1
 .PHONY: ./test/Stress.db
 ./test/Stress.db: .fix-multy1
-.PHONY: ./demo/Demo.db
-./demo/Demo.db: .fix-multy1
-.PHONY: ./demo/Demo.exe
-./demo/Demo.exe: .fix-multy1
-.PHONY: ./demo/Demo.urp
-./demo/Demo.urp: .fix-multy1
+.PHONY: lib
+lib: .fix-multy1
+.PHONY: demo
+demo: .fix-multy1
+.PHONY: ./demo/Demo2.exe
+./demo/Demo2.exe: .fix-multy1
+.PHONY: ./demo/Demo2.urp
+./demo/Demo2.urp: .fix-multy1
 .PHONY: .cake3/tmp5
 .cake3/tmp5: .fix-multy1
 .PHONY: ./test2/Stress.exe
@@ -319,8 +310,8 @@ lib: .fix-multy1
 .cake3/tmp0: .fix-multy1
 .PHONY: ./CallbackFFI.o
 ./CallbackFFI.o: .fix-multy1
-.PHONY: ./demo/Demo.sql
-./demo/Demo.sql: .fix-multy1
+.PHONY: ./demo/Demo2.sql
+./demo/Demo2.sql: .fix-multy1
 .PHONY: ./test/Stress.sql
 ./test/Stress.sql: .fix-multy1
 .PHONY: ./test2/Simple1.sql
@@ -337,7 +328,7 @@ lib: .fix-multy1
 endif
 .PHONY: clean
 clean: 
-	-rm ./CallbackFFI.o ./demo/Demo.db ./demo/Demo.exe ./demo/Demo.sql ./demo/Demo.urp ./lib.urp ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Stress.urp ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Simple1.urp ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stdout.urp ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql ./test2/Stress.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5
+	-rm ./CallbackFFI.o ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql ./demo/Demo2.urp ./lib.urp ./test/Stress.db ./test/Stress.exe ./test/Stress.sql ./test/Stress.urp ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Simple1.urp ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stdout.urp ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql ./test2/Stress.urp .cake3/tmp0 .cake3/tmp1 .cake3/tmp2 .cake3/tmp3 .cake3/tmp4 .cake3/tmp5
 	-rm -rf .cake3
 
 endif

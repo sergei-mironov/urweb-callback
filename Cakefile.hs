@@ -66,37 +66,28 @@ project = do
       ur (single t)
 
 
-  d <- uwapp "-dbms postgres" "demo/Demo.urp" $ do
-    let demo = "demo/Demo.ur"
-    allow url "http://code.jquery.com/ui/1.10.3/jquery-ui.js";
-    allow mime "text/javascript";
-    allow mime "text/css";
-    allow mime "image/jpeg";
-    allow mime "image/png";
-    allow mime "image/gif";
+  d <- uwapp "-dbms postgres" "demo/Demo2.urp" $ do
+    let demo = "demo/Demo2.ur"
     database ("dbname="++(takeBaseName demo))
     safeGet demo "main"
-    safeGet demo "job_monitor"
-    safeGet demo "src_monitor"
-    safeGet demo "job_start"
-    safeGet demo "C/callback"
-    safeGet demo "Find/C/callback"
-    safeGet demo "Cat/C/callback"
-    safeGet demo "viewsrc"
-    safeGet demo "status"
+    safeGet demo "monitor"
     sql (demo.="sql")
     library l
     ur (sys "list")
     ur (sys "string")
     ur (pair demo)
 
-  dbs <- forM (d:ts) $ \t -> rule $ do
-    let sql = urpSql (toUrp t)
-    let dbn = takeBaseName sql
-    shell [cmd|dropdb --if-exists $(string dbn)|]
-    shell [cmd|createdb $(string dbn)|]
-    shell [cmd|psql -f $(sql) $(string dbn)|]
-    shell [cmd|touch @(sql.="db")|]
+  let mkdb t = rule $ do
+                let sql = urpSql (toUrp t)
+                let dbn = takeBaseName sql
+                shell [cmd|dropdb --if-exists $(string dbn)|]
+                shell [cmd|createdb $(string dbn)|]
+                shell [cmd|psql -f $(sql) $(string dbn)|]
+                shell [cmd|touch @(sql.="db")|]
+
+  rule $ do
+    phony "demo"
+    depend (mkdb d)
 
   rule $ do
     phony "lib"
@@ -105,8 +96,9 @@ project = do
   rule $ do
     phony "all"
     depend ts
+    depend (map mkdb ts)
     depend d
-    depend dbs
+    depend (mkdb d)
 
 main = do
   writeMake (file "Makefile") (project)
