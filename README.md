@@ -120,8 +120,7 @@ starts the shell script which counts from 1 to 5.
       x <- C.abortMore 20;
       return <xml>{[x]}</xml>)
 
-See test/ folder for more examples.
-
+See test/, test2/ and demo/ folders for more examples.
 
 Debugging
 ---------
