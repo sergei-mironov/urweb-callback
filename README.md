@@ -67,17 +67,64 @@ _Callback.Default_ funtor calls Callback.Make with all default values.
 
 The most important functions returned by Make are:
 
-    con jobrec = [JobRef = int, ExitCode = option int, Cmd = string, Stdout = string]
+      (** Arguments API **)
 
-    type jobref = CallbackFFI.jobref
+      type jobargs = {
+          Cmd : string
+        , Stdin : buffer
+        , Args : list string
+        }
 
-    val nextjob : unit -> transaction jobref
+      con jobrec = [
+          JobRef = int
+        , ExitCode = option int
+        , Cmd = string
+        , Stdout = string
+        , ErrRep = string
+        ]
 
-    val create : jobref -> string -> blob -> transaction unit
 
-    val get : jobref -> transaction (record jobrec)
+      val shellCommand : string -> jobargs
 
-    val runNow : jobref -> string -> blob -> transaction (record jobrec)
+      val mkBuffer : string -> buffer
+
+      (** Job API **)
+
+      type jobref = int
+
+      (* Generate uniq jobref *)
+      val nextJobRef : transaction jobref
+
+      (* Simply create the job *)
+      val create : jobargs -> transaction jobref
+
+      (*
+       * Create the job using existing jobref and the set of arguments. Jobref
+       * should be uniq within the application
+       *)
+      val createWithRef : jobref -> jobargs -> transaction unit
+
+      (*
+       * Create the job and run it immideately
+       *)
+      val createSync : jobargs -> transaction (record jobrec)
+
+      (*
+       * Feed more input to the job's stdin
+       *)
+      val feed : jobref -> buffer -> transaction unit
+
+      val get : jobref -> transaction (record jobrec)
+
+      (* Utility: take the multy-line string and return the very last line *)
+      val lastLine : string -> string
+
+      (*
+       * Aborts the transaction if the number of jobs exceeds the limit.
+       * Returns the actual number of job objects in memory.
+       *)
+      val abortMore : int -> transaction int
+
 
 `nextjob` issues unique job references, `create` accepts the following arguments:
 jobref, command line, stdin, then runs the process. `get` returns it's state.
