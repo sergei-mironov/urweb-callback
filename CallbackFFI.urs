@@ -29,6 +29,9 @@ val errors : job -> string
 
 
 val lastLine : string -> string
+val lastLines : int -> string -> string
+val dropFirstLine : string -> string
+
 
 val executeSync : job -> transaction unit
 

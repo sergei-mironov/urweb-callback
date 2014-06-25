@@ -60,6 +60,8 @@ signature S = sig
 
   (* Utility: take the multy-line string and return the very last line *)
   val lastLine : string -> string
+  val lastLines : int -> string -> string
+  val dropFirstLine : string -> string
 
   (*
    * Aborts the transaction if the number of jobs exceeds the limit.

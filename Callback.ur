@@ -63,6 +63,8 @@ signature S = sig
   val get : jobref -> transaction (record jobrec)
 
   val lastLine : string -> string
+  val lastLines : int -> string -> string
+  val dropFirstLine : string -> string
 
   val abortMore : int -> transaction int
 end
@@ -166,6 +168,8 @@ struct
     feed_ j b
 
   val lastLine = CallbackFFI.lastLine
+  val lastLines = CallbackFFI.lastLines
+  val dropFirstLine = CallbackFFI.dropFirstLine
 
   fun get jr =
     mj <- CallbackFFI.tryDeref jr;

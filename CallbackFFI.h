@@ -52,6 +52,8 @@ uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job 
 uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job j);
 
 uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string s);
+uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int i, uw_Basis_string s);
+uw_Basis_string uw_CallbackFFI_dropFirstLine(struct uw_context *ctx, uw_Basis_string s);
 
 uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_string msg);
 
