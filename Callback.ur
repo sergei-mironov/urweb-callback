@@ -62,11 +62,12 @@ signature S = sig
 
   val get : jobref -> transaction (record jobrec)
 
-  val lastLine : string -> string
   val lastLines : int -> string -> string
-  val dropFirstLine : string -> string
 
   val abortMore : int -> transaction int
+
+  val checkString : (string -> bool) -> string -> transaction string
+
 end
 
 
@@ -167,9 +168,7 @@ struct
     j <- CallbackFFI.deref jr;
     feed_ j b
 
-  val lastLine = CallbackFFI.lastLine
   val lastLines = CallbackFFI.lastLines
-  val dropFirstLine = CallbackFFI.dropFirstLine
 
   fun get jr =
     mj <- CallbackFFI.tryDeref jr;
@@ -180,10 +179,15 @@ struct
         r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
         return r.Jobs
 
-  val abortMore l =
+  fun abortMore l =
     CallbackFFI.limitActive l;
     n <- CallbackFFI.nactive;
     return n
+
+  fun checkString (f:string -> bool) (s:string) : transaction string =
+    return (case f s of
+      |False => error <xml>checkString failed on {[s]}</xml>
+      |True => s)
 
 end
 

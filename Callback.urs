@@ -58,16 +58,18 @@ signature S = sig
 
   val get : jobref -> transaction (record jobrec)
 
-  (* Utility: take the multy-line string and return the very last line *)
-  val lastLine : string -> string
-  val lastLines : int -> string -> string
-  val dropFirstLine : string -> string
-
   (*
    * Aborts the transaction if the number of jobs exceeds the limit.
    * Returns the actual number of job objects in memory.
    *)
   val abortMore : int -> transaction int
+
+
+  (** String utilities **)
+
+  val lastLines : int -> string -> string
+
+  val checkString : (string -> bool) -> string -> transaction string
 
 end
 

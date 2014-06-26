@@ -74,6 +74,7 @@ project = do
     sql (demo.="sql")
     library l
     ur (sys "list")
+    ur (sys "char")
     ur (sys "string")
     ur (pair demo)
 

@@ -8,6 +8,8 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
+val cmd = "ping -c 15"
+
 fun monitor (jr:C.jobref) : transaction page = template (
   s <- source "";
   let
@@ -21,18 +23,17 @@ fun monitor (jr:C.jobref) : transaction page = template (
       </xml>
   end)
 
-fun ping f : transaction page =
-  String.all ()
-  s <- (return f.IP);
+fun ping frm =
   x <- C.abortMore 20;
-  jr <- C.create (C.shellCommand ("ping -c 15 " ^ s));
+  s <- C.checkString (String.all (fn c => Char.isAlnum c || #"." = c)) frm.IP;
+  jr <- C.create (C.shellCommand (cmd ^ " " ^ s));
   redirect (url (monitor jr))
 
 fun main {} : transaction page = template (
   return <xml>
     <form>
       <p>Who do you want to ping today?</p>
-      <p>IP <textbox{#IP}/></p>
+      <p>{[cmd]} <textbox{#IP}/></p>
       <submit action={ping}/>
     </form>
   </xml>)

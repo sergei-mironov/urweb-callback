@@ -1016,33 +1016,6 @@ uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job
   return str;
 }
 
-uw_Basis_string uw_CallbackFFI_lastLine(struct uw_context *ctx, uw_Basis_string o)
-{
-  int i;
-  size_t end = strlen(o);
-  for(i=end-1; i>=0; i--) {
-
-    if(o[i] == '\n') {
-      if((end-(i+1)) >= 1) {
-        break;
-      }
-      else {
-        end = i;
-      }
-    }
-
-    if(o[i] == 0 ) {
-      end = i;
-    }
-
-  }
-
-  char* str = (char*) uw_malloc(ctx, end-(i+1)+1);
-  memcpy(str, &o[(i+1)], end-(i+1));
-  str[end-(i+1)] = 0;
-  return str;
-}
-
 uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int cnt, uw_Basis_string o)
 {
   int i;
@@ -1079,25 +1052,6 @@ uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int cnt, uw_Bas
   memcpy(str, &o[(i+1)], end-(i+1));
   str[end-(i+1)] = 0;
   return str;
-}
-
-uw_Basis_string uw_CallbackFFI_dropFirstLine(struct uw_context *ctx, uw_Basis_string o)
-{
-  int i;
-  int fnd = 0;
-
-  for(i=0; o[i]!=0; i++) {
-
-    if(i>0 && o[i-1] == '\n') {
-      fnd = i;
-      break;
-    }
-  }
-
-  if(fnd == 0)
-    fnd=i;
-
-  return &o[fnd];
 }
 
 uw_Basis_unit uw_CallbackFFI_executeSync(

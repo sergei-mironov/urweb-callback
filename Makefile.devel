@@ -54,6 +54,7 @@ demo: ./Makefile.devel ./demo/Demo2.db
 	echo 'library ../.' >> .cake3/tmp5
 	echo '' >> .cake3/tmp5
 	echo '$$/list' >> .cake3/tmp5
+	echo '$$/char' >> .cake3/tmp5
 	echo '$$/string' >> .cake3/tmp5
 	echo '.././demo/Demo2' >> .cake3/tmp5
 ./test2/Stress.exe: .fix-multy5
