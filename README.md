@@ -24,7 +24,7 @@ Follow the instructions below:
         $ cd urweb
 
               # (skip this line to stay on latets Ur/Web)
-        $ hg checkout 924e2ef31f5a
+        $ hg checkout a3435112b83e
     
         $ ./autogen.sh
         $ ./configure
