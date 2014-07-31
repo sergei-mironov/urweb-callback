@@ -736,7 +736,8 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
   int jr = get(j)->key;
 
   if(_stdin.size > maxsz)
-    uw_error(ctx, FATAL, "pushStdin: input provided will never fit into job #%d's buffer of size %d\n", jr, maxsz);
+    uw_error(ctx, FATAL, "pushStdin: input of size %d will never fit into job #%d's buffer of size %d\n",
+      _stdin.size, jr, maxsz);
 
   enum {ok, closed, err} ret = err;
 
