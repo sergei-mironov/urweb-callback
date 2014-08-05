@@ -9,6 +9,7 @@ con jobrec =
   , Cmd = string
     (* Stdout of the job (at least stdout_sz bytes) *)
   , Stdout = string
+  , Stderr = string
   , ErrRep = string
   ]
 
@@ -108,14 +109,16 @@ struct
       ExitCode=e,
       Cmd=(CallbackFFI.cmd j),
       Stdout=(CallbackFFI.stdout j),
+      Stderr=(CallbackFFI.stderr j),
       ErrRep=(CallbackFFI.errors j)}
 
   fun callback (jr:jobref) : transaction page =
     j <- CallbackFFI.deref jr;
     ec <- (return (CallbackFFI.exitcode j));
     so <- (return (CallbackFFI.stdout j));
+    se <- (return (CallbackFFI.stderr j));
     er <- (return (CallbackFFI.errors j));
-    dml(UPDATE jobs SET ExitCode = {[Some ec]}, Stdout = {[so]}, ErrRep = {[er]} WHERE JobRef = {[jr]});
+    dml(UPDATE jobs SET ExitCode = {[Some ec]}, Stdout = {[so]}, Stderr = {[se]}, ErrRep = {[er]} WHERE JobRef = {[jr]});
     mji <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
     case mji of
       |None =>
@@ -140,7 +143,7 @@ struct
     mapM_ (CallbackFFI.pushArg j) ja.Args;
     CallbackFFI.setCompletionCB j (Some (url (callback jr)));
     feed_ j ja.Stdin;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, "", ""));
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout,Stderr,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, "", "", ""));
     CallbackFFI.run j;
     return {}
 

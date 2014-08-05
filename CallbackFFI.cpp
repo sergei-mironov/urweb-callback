@@ -85,7 +85,9 @@ struct job {
   job(jkey _key, const string &_cmd, int _bufsize) :
 		  key(_key), cmd(_cmd) {
     buf_stdout.resize(_bufsize);
+    buf_stderr.resize(_bufsize);
     sz_stdout = 0;
+    sz_stderr = 0;
     sz_stdin = 0;
     exitcode = -1;
     close_stdin = false;
@@ -128,9 +130,11 @@ struct job {
 
   size_t sz_stdout;
   size_t sz_stdin;
+  size_t sz_stderr;
 
   blob buf_stdout;
   blob buf_stdin;
+  blob buf_stderr;
 
   std::vector<string> args;
 
@@ -171,6 +175,54 @@ private:
 };
 
 /*{{{ Execute function */
+
+static ssize_t read_job(int fd, jptr j, blob job::*buf, size_t job::*buf_sz, bool dump_to_stderr = false)
+{
+  size_t bytes_read;
+  blob& b = *(j.get()).*buf;
+  size_t &bs = *(j.get()).*buf_sz;
+
+  if(bs < b.size()) {
+    // FIXME: calling C read while holding a mutex. Looks safe, but
+    // still suspicious.
+    jlock _(j);
+    bytes_read = read(fd, &b[bs], b.size() - bs);
+
+    if(bytes_read < 0) {
+      if(errno == EINTR)
+        return -EINTR;
+      else
+        j->throw_c([=](oss& e) { e << "read failed" ; });
+    }
+
+    bs += bytes_read;
+  }
+  else {
+    blob devnull(b.size() / 2);
+
+    bytes_read = read(fd, &devnull[0], devnull.size());
+
+    if(bytes_read < 0) {
+      if(errno == EINTR)
+        return -EINTR;
+      else
+        j->throw_c([=](oss& e) { e << "read failed (devnull)" ; });
+    }
+    else {
+      jlock _(j);
+      memmove(&b[0], &b[bytes_read], b.size() - bytes_read);
+      memcpy(&b[b.size() - bytes_read], &devnull[0], bytes_read);
+    }
+  }
+
+  if(dump_to_stderr && bytes_read > 0) {
+    blob buf(&b[0] + bs - bytes_read, &b[0] + bs);
+    buf.push_back('\0');
+    fprintf(stderr, "%s", &buf[0]);
+  }
+
+  return bytes_read;
+}
 
 /* Borrowed from Mark Weber's uw-process. Thanks, Mark. */
 static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
@@ -298,54 +350,21 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
         if (FD_ISSET( cmd_to_ur2[0], &rfds )) {
           ret--;
-          int bytes_read;
-          unsigned char buf[512+1];
-          
-          bytes_read = read(cmd_to_ur2[0], &buf[0], 512);
-          if(bytes_read > 0) {
-            buf[bytes_read] = 0;
-            ls->log_error(ls->logger_data,"%s", buf);
+          ssize_t ret = read_job(cmd_to_ur2[0], r, &job::buf_stderr, &job::sz_stderr, true);
+          if(ret < 0)
+            continue;
+          else if (ret == 0) {
+            UW_SYSTEM_PIPE_CLOSE_OUT(cmd_to_ur2);
+            break;
           }
         }
 
         if (FD_ISSET( cmd_to_ur[0], &rfds )) {
           ret--;
-          size_t bytes_read;
-
-          if(r->sz_stdout < r->buf_stdout.size()) {
-            // FIXME: calling C read while holding a mutex. Looks safe, but
-            // still suspicious.
-            jlock _(r);
-            bytes_read = read(cmd_to_ur[0], &r->buf_stdout[r->sz_stdout], r->buf_stdout.size() - r->sz_stdout);
-
-            if(bytes_read < 0) {
-              if(errno == EINTR)
-                continue;
-              else
-                r->throw_c([=](oss& e) { e << "read failed" ; });
-            }
-
-            r->sz_stdout += bytes_read;
-          }
-          else {
-            blob devnull(r->buf_stdout.size() / 2);
-
-            bytes_read = read(cmd_to_ur[0], &devnull[0], devnull.size());
-
-            if(bytes_read < 0) {
-              if(errno == EINTR)
-                continue;
-              else
-                r->throw_c([=](oss& e) { e << "read failed (devnull)" ; });
-            }
-            else {
-              jlock _(r);
-              memmove(&r->buf_stdout[0], &r->buf_stdout[bytes_read], r->buf_stdout.size() - bytes_read);
-              memcpy(&r->buf_stdout[r->buf_stdout.size() - bytes_read], &devnull[0], bytes_read);
-            }
-          }
-
-          if (bytes_read == 0) {
+          ssize_t ret = read_job(cmd_to_ur[0], r, &job::buf_stdout, &job::sz_stdout);
+          if(ret < 0)
+            continue;
+          else if (ret == 0) {
             UW_SYSTEM_PIPE_CLOSE_OUT(cmd_to_ur);
             break;
           }
@@ -991,6 +1010,17 @@ uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job
   char* str = (char*)uw_malloc(ctx, sz + 1);
 
   memcpy(str, get(j)->buf_stdout.data(), sz);
+  str[sz] = 0;
+
+  return str;
+}
+
+uw_Basis_string uw_CallbackFFI_stderr(struct uw_context *ctx, uw_CallbackFFI_job j)
+{
+  size_t sz = get(j)->sz_stderr;
+  char* str = (char*)uw_malloc(ctx, sz + 1);
+
+  memcpy(str, get(j)->buf_stderr.data(), sz);
   str[sz] = 0;
 
   return str;

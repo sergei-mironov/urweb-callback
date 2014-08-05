@@ -4,6 +4,7 @@ con jobrec = [
   , ExitCode = option int
   , Cmd = string
   , Stdout = string
+  , Stderr = string
   , ErrRep = string
   ]
 
