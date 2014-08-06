@@ -183,8 +183,6 @@ static ssize_t read_job(int fd, jptr j, blob job::*buf, size_t job::*buf_sz, boo
   size_t &bs = *(j.get()).*buf_sz;
 
   if(bs < b.size()) {
-    // FIXME: calling C read while holding a mutex. Looks safe, but
-    // still suspicious.
     jlock _(j);
     bytes_read = read(fd, &b[bs], b.size() - bs);
 
@@ -198,6 +196,7 @@ static ssize_t read_job(int fd, jptr j, blob job::*buf, size_t job::*buf_sz, boo
     bs += bytes_read;
   }
   else {
+    // FIXME: inefficient, don't use stack for buffers
     blob devnull(b.size() / 2);
 
     bytes_read = read(fd, &devnull[0], devnull.size());
@@ -350,13 +349,8 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
         if (FD_ISSET( cmd_to_ur2[0], &rfds )) {
           ret--;
-          ssize_t ret = read_job(cmd_to_ur2[0], r, &job::buf_stderr, &job::sz_stderr, true);
-          if(ret < 0)
-            continue;
-          else if (ret == 0) {
-            UW_SYSTEM_PIPE_CLOSE_OUT(cmd_to_ur2);
-            break;
-          }
+          read_job(cmd_to_ur2[0], r, &job::buf_stderr, &job::sz_stderr, true);
+          /* ignore return value compeletely */
         }
 
         if (FD_ISSET( cmd_to_ur[0], &rfds )) {
@@ -375,8 +369,6 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
           dprintf("Writing for Job #%d\n", r->key);
 
-          // FIXME: calling C write while holding a mutex. Looks safe, but
-          // still suspicious.
           jlock _(r);
 
           size_t written = write(ur_to_cmd[1], &r->buf_stdin[r->sz_stdin], r->buf_stdin.size() - r->sz_stdin);
