@@ -23,17 +23,16 @@ val ref : job -> jobref
 
 val pid : job -> int
 val exitcode : job -> int
-val stdout : job -> string
-val stderr : job -> string
+val stdout : job -> blob
+val stderr : job -> blob
 val cmd : job -> string
 val errors : job -> string
-
-
-val lastLines : int -> string -> string
-
 
 val executeSync : job -> transaction unit
 
 (* re-run the handler *)
 val forceBoundedRetry : string -> transaction unit
 
+
+val lastLines : int -> blob -> string
+val blobLines : blob -> string

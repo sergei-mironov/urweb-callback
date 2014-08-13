@@ -19,7 +19,7 @@ structure Cat = CallbackNotify2.Make(struct
   val cmd = "read f; if test -f \"$f\" ; then cat $f ; fi"
 
   fun render j : transaction xbody =
-    return <xml><pre>{[j.Stdout]}</pre></xml>
+    return <xml><pre>{[Callback.lastLines 100 j.Stdout]}</pre></xml>
 
 end)
 
@@ -38,7 +38,7 @@ structure Find = CallbackNotify2.Make(struct
   val cmd = "find -type f -name '*urs' -or -name '*ur'"
 
   fun render j : transaction xbody =
-      l <- forXM (lines j.Stdout) (fn s =>
+      l <- forXM (lines (Callback.lastLines 100 j.Stdout)) (fn s =>
         return <xml><a link={viewsrc s}>{[s]}</a><br/></xml>);
       return <xml>{l}</xml>
 

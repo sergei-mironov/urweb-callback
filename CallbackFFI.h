@@ -46,13 +46,11 @@ uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_
 
 uw_Basis_int uw_CallbackFFI_pid(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_int uw_CallbackFFI_exitcode(struct uw_context *ctx, uw_CallbackFFI_job j);
-uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job j);
-uw_Basis_string uw_CallbackFFI_stderr(struct uw_context *ctx, uw_CallbackFFI_job j);
+uw_Basis_blob uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job j);
+uw_Basis_blob uw_CallbackFFI_stderr(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_string uw_CallbackFFI_cmd(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_unit uw_CallbackFFI_cleanup(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job j);
-
-uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int i, uw_Basis_string s);
 
 uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_string msg);
 
@@ -61,6 +59,10 @@ uw_Basis_unit uw_CallbackFFI_executeSync(
   uw_CallbackFFI_job j);
 
 uw_Basis_unit uw_CallbackFFI_limitActive(struct uw_context *ctx, uw_Basis_int l);
+
+/* Utils */
+uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int i, uw_Basis_blob s);
+uw_Basis_string uw_CallbackFFI_blobLines(struct uw_context *ctx, uw_Basis_blob s);
 
 #ifdef __cplusplus
 } // extern "C"

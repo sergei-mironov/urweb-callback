@@ -996,26 +996,22 @@ uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_
   return get(j)->key;
 }
 
-uw_Basis_string uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job j)
+uw_Basis_blob uw_CallbackFFI_stdout(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
-  size_t sz = get(j)->sz_stdout;
-  char* str = (char*)uw_malloc(ctx, sz + 1);
-
-  memcpy(str, get(j)->buf_stdout.data(), sz);
-  str[sz] = 0;
-
-  return str;
+  uw_Basis_blob b;
+  b.size = get(j)->sz_stdout;
+  b.data = (char*)uw_malloc(ctx, b.size);
+  memcpy(b.data, get(j)->buf_stdout.data(), b.size);
+  return b;
 }
 
-uw_Basis_string uw_CallbackFFI_stderr(struct uw_context *ctx, uw_CallbackFFI_job j)
+uw_Basis_blob uw_CallbackFFI_stderr(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
-  size_t sz = get(j)->sz_stderr;
-  char* str = (char*)uw_malloc(ctx, sz + 1);
-
-  memcpy(str, get(j)->buf_stderr.data(), sz);
-  str[sz] = 0;
-
-  return str;
+  uw_Basis_blob b;
+  b.size = get(j)->sz_stderr;
+  b.data = (char*)uw_malloc(ctx, b.size);
+  memcpy(b.data, get(j)->buf_stderr.data(), b.size);
+  return b;
 }
 
 uw_Basis_string uw_CallbackFFI_cmd(struct uw_context *ctx, uw_CallbackFFI_job j)
@@ -1039,7 +1035,16 @@ uw_Basis_string uw_CallbackFFI_errors(struct uw_context *ctx, uw_CallbackFFI_job
   return str;
 }
 
-uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int cnt, uw_Basis_string o)
+uw_Basis_string uw_CallbackFFI_blobLines(struct uw_context *ctx, uw_Basis_blob b)
+{
+  size_t len = strnlen(b.data, b.size);
+  char* str = (char*) uw_malloc(ctx, len+1);
+  memcpy(str, b.data, len);
+  str[len] = 0;
+  return str;
+}
+
+uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int cnt, uw_Basis_blob b)
 {
   int i;
   size_t end;
@@ -1049,7 +1054,8 @@ uw_Basis_string uw_CallbackFFI_lastLines(struct uw_context *ctx, int cnt, uw_Bas
     return s;
   }
 
-  end = strlen(o);
+  const char *o = (const char*)b.data;
+  end = b.size;
   for(i=end-1; i>=0; i--) {
 
     if(o[i] == '\n') {

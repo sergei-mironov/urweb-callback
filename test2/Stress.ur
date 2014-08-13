@@ -3,7 +3,7 @@ structure C = Callback.Default
 
 fun monitor (jr:C.jobref) : transaction page = T.template (
   j <- C.get jr;
-  return <xml>{[j.Stdout]}</xml>)
+  return <xml>{[Callback.blobLines j.Stdout]}</xml>)
 
 val max = 40
 

@@ -8,8 +8,8 @@ con jobrec =
     (* Command line of the job *)
   , Cmd = string
     (* Stdout of the job (at least stdout_sz bytes) *)
-  , Stdout = string
-  , Stderr = string
+  , Stdout = blob
+  , Stderr = blob
   , ErrRep = string
   ]
 
@@ -39,6 +39,9 @@ type jobargs_ = {
 fun shellCommand_ s =
   {Cmd = "/bin/sh", Stdin = Chunk (textBlob "", Some EOF), Args = "-c" :: s :: [] }
 
+val lastLines = CallbackFFI.lastLines
+
+val blobLines = CallbackFFI.blobLines
 
 signature S = sig
 
@@ -63,7 +66,7 @@ signature S = sig
 
   val get : jobref -> transaction (record jobrec)
 
-  val lastLines : int -> string -> string
+  val lastLines : int -> blob -> string
 
   val abortMore : int -> transaction int
 
@@ -143,7 +146,8 @@ struct
     mapM_ (CallbackFFI.pushArg j) ja.Args;
     CallbackFFI.setCompletionCB j (Some (url (callback jr)));
     feed_ j ja.Stdin;
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout,Stderr,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, "", "", ""));
+    nullb <- return (textBlob "");
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout,Stderr,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, {[nullb]}, {[nullb]}, ""));
     CallbackFFI.run j;
     return {}
 
@@ -159,7 +163,7 @@ struct
       jr <- nextJobRef;
       j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
       mapM_ (CallbackFFI.pushArg j) ja.Args;
-      CallbackFFI.pushStdin j b S.stdin_sz;
+      CallbackFFI.pushStdin j b (blobSize b);
       CallbackFFI.pushStdinEOF j;
       CallbackFFI.executeSync j;
       jrec <- runtimeJobRec j;

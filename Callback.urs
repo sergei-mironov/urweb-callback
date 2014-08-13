@@ -3,8 +3,8 @@ con jobrec = [
     JobRef = int
   , ExitCode = option int
   , Cmd = string
-  , Stdout = string
-  , Stderr = string
+  , Stdout = blob
+  , Stderr = blob
   , ErrRep = string
   ]
 
@@ -20,6 +20,10 @@ type jobargs_ = {
   , Stdin : buffer
   , Args : list string
   }
+
+val lastLines : int -> blob -> string
+
+val blobLines : blob -> string
 
 signature S = sig
 
@@ -68,7 +72,7 @@ signature S = sig
 
   (** String utilities **)
 
-  val lastLines : int -> string -> string
+  val lastLines : int -> blob -> string
 
   val checkString : (string -> bool) -> string -> transaction string
 

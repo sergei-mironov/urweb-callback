@@ -6,7 +6,7 @@ table jobs : { JR : int }
 fun monitor {} : transaction page = T.template (
   jr <- oneRow1(SELECT * FROM jobs);
   j <- C.get jr.JR;
-  return <xml>{[j.Stdout]}</xml>)
+  return <xml>{[Callback.blobLines j.Stdout]}</xml>)
 
 fun lastline {} : transaction page = T.template (
   jr <- oneRow1(SELECT * FROM jobs);
