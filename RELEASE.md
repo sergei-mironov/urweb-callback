@@ -28,9 +28,13 @@ The application which uses callbacks may now be as simple as:
 
 To get the sources, type:
 
-	$ git clone https://github.com/grwlf/urweb-callback
-	$ cd urweb-callback
-	$ make demo
+    $ git clone https://github.com/grwlf/urweb-callback
+    $ cd urweb-callback
+    $ make demo
+
+I have run a demo application at
+
+    http://46.38.250.132:8080/Demo2/main
 
 Please, notify me about problems by creating Github issues or by e-mail.
 
