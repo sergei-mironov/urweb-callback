@@ -47,6 +47,9 @@ fun checkString (f:string -> bool) (s:string) : transaction string =
 
 fun shellCommand_ s =
   {Cmd = "/bin/sh", Stdin = Chunk (textBlob "", Some EOF), Args = "-c" :: s :: [] }
+  
+fun absCommand_ cmd args =
+  {Cmd = cmd, Stdin = Chunk (textBlob "", Some EOF), Args = args}
 
 signature S = sig
 
@@ -57,6 +60,8 @@ signature S = sig
   val nextJobRef : transaction jobref
 
   val shellCommand : string -> jobargs
+
+  val absCommand : string -> (list string) -> jobargs
 
   val mkBuffer : string -> buffer
 
@@ -98,6 +103,8 @@ struct
   val nextJobRef = nextval jobrefs
 
   val shellCommand = shellCommand_
+
+  val absCommand = absCommand_
 
   val mkBuffer = mkBuffer_
 

@@ -1,6 +1,16 @@
 structure CB = Callback
 structure C = Callback.Default
 
+fun needenv v =
+  e <- getenv (blessEnvVar v);
+  case e of
+    |Some x => return x
+    |None => error <xml>Env var {[v]} is not set</xml>
+
+task initialize = fn _ =>
+  _ <- needenv "PING";
+  return {}
+
 fun template (mb:transaction xbody) : transaction page =
   b <- mb;
   return
@@ -8,8 +18,6 @@ fun template (mb:transaction xbody) : transaction page =
       <head/>
       <body>{b}</body>
     </xml>
-
-val cmd = "ping -c 15"
 
 fun monitor (jr:C.jobref) : transaction page = template (
   s <- source ("", "");
@@ -42,16 +50,16 @@ fun monitor (jr:C.jobref) : transaction page = template (
   end)
 
 fun ping frm =
+  ping <- needenv "PING";
   x <- C.abortMore 20;
-  s <- CB.checkString (String.all (fn c => Char.isAlnum c || #"." = c)) frm.IP;
-  jr <- C.create (C.shellCommand (cmd ^ " " ^ s));
+  jr <- C.create (C.absCommand ping ("-c" :: "15" :: frm.IP :: []));
   redirect (url (monitor jr))
 
 fun main {} : transaction page = template (
   return <xml>
     <form>
       <p>Who do you want to ping today?</p>
-      <p>{[cmd]} <textbox{#IP}/></p>
+      <p>ping -c 15 <textbox{#IP}/></p>
       <submit action={ping}/>
     </form>
   </xml>)

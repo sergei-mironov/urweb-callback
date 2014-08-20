@@ -71,6 +71,7 @@ project = do
     database ("dbname="++(takeBaseName demo))
     safeGet demo "main"
     safeGet demo "monitor"
+    allow env "PING"
     sql (demo.="sql")
     library l
     ur (sys "list")

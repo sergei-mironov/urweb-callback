@@ -29,6 +29,8 @@ signature S = sig
 
   val shellCommand : string -> jobargs
 
+  val absCommand : string -> (list string) -> jobargs
+
   val mkBuffer : string -> buffer
 
   (** Job API **)
