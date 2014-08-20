@@ -1,3 +1,4 @@
+structure CB = Callback
 structure C = Callback.Default
 
 fun template (mb:transaction xbody) : transaction page =
@@ -11,21 +12,38 @@ fun template (mb:transaction xbody) : transaction page =
 val cmd = "ping -c 15"
 
 fun monitor (jr:C.jobref) : transaction page = template (
-  s <- source "";
+  s <- source ("", "");
   let
-    fun getout jr = j <- C.get jr; return (C.lastLines 8 j.Stdout)
+    fun getout jr = j <- C.get jr; return (CB.lastLines 8 j.Stdout, CB.lastLines 8 j.Stderr)
     fun loop {} = o <- rpc (getout jr); set s o; sleep 1000; loop {}
   in
+    j <- C.get jr;
     return
       <xml>
+        <h1>Executing {[j.Cmd]}</h1>
+        <hr/>
         <active code={spawn (loop {}); return <xml/>} />
-        <dyn signal={v<-signal s; return <xml><pre>{[v]}</pre></xml>}/>
+        <dyn signal={
+          (o,e)<-signal s;
+          return <xml>
+            <div style="height:300px;">
+              <h3>Stdout</h3>
+              <pre>{[o]}</pre>
+            </div>
+            <hr/>
+            <div style="height:300px;">
+              <h3>Stderr</h3>
+              <pre>{[e]}</pre>
+            </div>
+            <hr/>
+          </xml>
+        }/>
       </xml>
   end)
 
 fun ping frm =
   x <- C.abortMore 20;
-  s <- C.checkString (String.all (fn c => Char.isAlnum c || #"." = c)) frm.IP;
+  s <- CB.checkString (String.all (fn c => Char.isAlnum c || #"." = c)) frm.IP;
   jr <- C.create (C.shellCommand (cmd ^ " " ^ s));
   redirect (url (monitor jr))
 

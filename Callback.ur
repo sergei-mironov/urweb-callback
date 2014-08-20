@@ -36,12 +36,17 @@ type jobargs_ = {
   , Args : list string
   }
 
-fun shellCommand_ s =
-  {Cmd = "/bin/sh", Stdin = Chunk (textBlob "", Some EOF), Args = "-c" :: s :: [] }
-
 val lastLines = CallbackFFI.lastLines
 
 val blobLines = CallbackFFI.blobLines
+
+fun checkString (f:string -> bool) (s:string) : transaction string =
+  return (case f s of
+    |False => error <xml>checkString failed on {[s]}</xml>
+    |True => s)
+
+fun shellCommand_ s =
+  {Cmd = "/bin/sh", Stdin = Chunk (textBlob "", Some EOF), Args = "-c" :: s :: [] }
 
 signature S = sig
 
@@ -66,11 +71,7 @@ signature S = sig
 
   val get : jobref -> transaction (record jobrec)
 
-  val lastLines : int -> blob -> string
-
   val abortMore : int -> transaction int
-
-  val checkString : (string -> bool) -> string -> transaction string
 
 end
 
@@ -175,8 +176,6 @@ struct
     j <- CallbackFFI.deref jr;
     feed_ j b
 
-  val lastLines = CallbackFFI.lastLines
-
   fun get jr =
     mj <- CallbackFFI.tryDeref jr;
     case mj of
@@ -190,11 +189,6 @@ struct
     CallbackFFI.limitActive l;
     n <- CallbackFFI.nactive;
     return n
-
-  fun checkString (f:string -> bool) (s:string) : transaction string =
-    return (case f s of
-      |False => error <xml>checkString failed on {[s]}</xml>
-      |True => s)
 
 end
 

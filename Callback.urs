@@ -21,10 +21,6 @@ type jobargs_ = {
   , Args : list string
   }
 
-val lastLines : int -> blob -> string
-
-val blobLines : blob -> string
-
 signature S = sig
 
   (** Arguments API **)
@@ -69,13 +65,6 @@ signature S = sig
    *)
   val abortMore : int -> transaction int
 
-
-  (** String utilities **)
-
-  val lastLines : int -> blob -> string
-
-  val checkString : (string -> bool) -> string -> transaction string
-
 end
 
 functor Make(S :
@@ -98,4 +87,13 @@ sig
 end) : S
 
 structure Default : S
+
+
+(** Helper string utilities **)
+
+val lastLines : int -> blob -> string
+
+val blobLines : blob -> string
+
+val checkString : (string -> bool) -> string -> transaction string
 
