@@ -27,10 +27,20 @@ signature S = sig
 
   type jobargs = jobargs_
 
+  (* Contructor for jobargs: prepare a shell command. Programmer is responsible
+   * for keeping this line safe for the system
+   *)
   val shellCommand : string -> jobargs
 
+  (*
+   * Contructor for jobargs: takes an absolute path to the executable and a list
+   * of arguments. This is the required way of calling jobs.
+   *)
   val absCommand : string -> (list string) -> jobargs
 
+  (*
+   * Constructor for buffer. Makes a buffer from a string
+   *)
   val mkBuffer : string -> buffer
 
   (** Job API **)
@@ -55,10 +65,14 @@ signature S = sig
   val createSync : jobargs -> transaction (record jobrec)
 
   (*
-   * Feed more input to the job's stdin
+   * Feed more input to the job's stdin. It is an error to feed more data than
+   * job's stdin buffer may hold. See Make's stdin_sz parameter.
    *)
   val feed : jobref -> buffer -> transaction unit
 
+  (*
+   * Get job's description structure
+   *)
   val get : jobref -> transaction (record jobrec)
 
   (*
@@ -72,12 +86,14 @@ end
 functor Make(S :
 sig
 
-  (* Depth of garbage-collecting. All finished jobs older then current - gc_depth
+  (* Depth of garbage-collecting. All finished jobs older then (current - gc_depth)
    * will be removed
    *)
   val gc_depth : int
 
-  (* Stdout buffer contains last stdout_sz bytes *)
+  (* The size of Stdout and Stderr buffers. Buffers are 'scrolling', that means
+   * they contain last stdout_sz bytes of job's output
+   *)
   val stdout_sz : int
 
   (* Stdin buffer size. [feed] will restart the transaction on overflow *)

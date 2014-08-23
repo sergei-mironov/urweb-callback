@@ -1,4 +1,12 @@
-con jobrec = Callback.jobrec
+
+con jobrec = [
+    JobRef = int
+  , ExitCode = option int
+  , Cmd = string
+  , Stdout = string
+  , Stderr = string
+  , ErrRep = string
+  ]
 
 type job = record jobrec
 
@@ -6,20 +14,47 @@ datatype jobstatus = Ready of job | Running of (channel job) * (source job)
 
 type jobref = CallbackFFI.jobref
 
-val nextJobRef : transaction jobref
-
 type jobargs = Callback.jobargs_
 
-val create : jobargs -> transaction jobref
+signature S = sig
 
-val shellCommand : string -> jobargs
+  val nextJobRef : transaction jobref
 
-val monitor : jobref -> transaction jobstatus
+  val create : jobargs -> transaction jobref
 
-val monitorX : jobref -> (job -> xbody) -> transaction xbody
+  val shellCommand : string -> jobargs
 
-(*
- * Aborts the handler if the number of jobs exceeds the limit.
- * Returns the actual number of job objects in memory.
- *)
-val abortMore : int -> transaction int
+  val absCommand : string -> list string -> jobargs
+
+  val monitor : jobref -> transaction jobstatus
+
+  val monitorX : jobref -> (job -> xbody) -> transaction xbody
+
+  (*
+   * Aborts the handler if the number of jobs exceeds the limit.
+   * Returns the actual number of job objects in memory.
+   *)
+  val abortMore : int -> transaction int
+
+end
+
+functor Make(S :
+sig
+
+  (* Depth of garbage-collecting. All finished jobs older then (current - gc_depth)
+   * will be removed
+   *)
+  val gc_depth : int
+
+  (* The size of Stdout and Stderr buffers. Buffers are 'scrolling', that means
+   * they contain last stdout_sz bytes of job's output
+   *)
+  val stdout_sz : int
+
+  (* Stdin buffer size. [feed] will restart the transaction on overflow *)
+  val stdin_sz : int
+
+end) : S
+
+structure Default : S
+

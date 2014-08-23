@@ -13,7 +13,7 @@ project = do
     include "CallbackFFI.h"
     csrc' "CallbackFFI.cpp" "-std=c++11" "-lstdc++"
     safeGet "Callback.ur" "Default/callback"
-    safeGet "CallbackNotify.ur" "C/callback"
+    safeGet "CallbackNotify.ur" "Default/C/callback"
     ur (sys "list")
     ur (pair "Callback.ur")
     ur (pair "CallbackNotify.ur")
@@ -23,6 +23,7 @@ project = do
               , "test2/Simple1.ur"
               , "test2/Stdout.ur"
               , "test2/Stress.ur"
+              , "test2/Notify.ur"
               -- , "test/Test1.urp"
               -- , "test/Test2.urp"
               -- , "test/Test3.urp"
@@ -51,6 +52,7 @@ project = do
       safeGet (t.="ur") "monitor"
       safeGet (t.="ur") "run"
       safeGet (t.="ur") "C/callback"
+      safeGet (t.="ur") "C/C/callback"
       safeGet (t.="ur") "cnt"
       safeGet (t.="ur") "Find/C/callback"
       safeGet (t.="ur") "Cat/C/callback"
