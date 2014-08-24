@@ -26,8 +26,15 @@ signature S = sig
 
   val absCommand : string -> list string -> jobargs
 
+  (*
+   * Returns status of a job in a form of (channel * source)
+   *)
   val monitor : jobref -> transaction jobstatus
 
+  (*
+   * Higher-level version of monitor. Takes 'render' function and returns the
+   * XML representing job status.
+   *)
   val monitorX : jobref -> (job -> xbody) -> transaction xbody
 
   (*

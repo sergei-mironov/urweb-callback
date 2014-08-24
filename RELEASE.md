@@ -1,30 +1,46 @@
-Hello, I am glad to announce the release of urweb-callback library version 2.0.
+Hello, I am glad to announce the release of urweb-callback library version 3.0.
 
 Urweb-callback offers the API for launching asynchronous server-side
-processes which may call the callback procedures upon completion. During the
-execution, user may inspect their exit code, standard output, process id
+processes which calls the callback procedures upon completion. During the
+execution, user may inspect job`s exit code, standard output, process id
 and other parameters.
 
-The application which uses callbacks may now be as simple as:
+Some features:
 
-    structure C = Callback.Default
+  * Added support for the Stderr stream.
+  * Stdin, Stdout and Stderr are now blobs. This allows passing binary data to the input of a job.
+  * String helper functions are moved to the Callback module.
+  * Improved CallbackNotify API.
+  * New automatic tests.
 
-    fun template (mb:transaction xbody) : transaction page =
-      b <- mb;
-      return
-        <xml>
-          <head/>
-          <body>{b}</body>
-        </xml>
+See the README (https://github.com/grwlf/urweb-callback) for more details.  The
+example code is listed below:
 
-    fun monitor (jr:C.jobref) : transaction page = T.template (
-      j <- C.get jr;
-      return <xml>{[j.Stdout]}</xml>)
+    structure CB = Callback
+    structure C = CallbackNotify.Default
 
-    fun main (world:string) : transaction page = T.template (
+    fun search (p:string) : transaction xbody =
       x <- C.abortMore 20;
-      jr <- C.create (C.shellCommand ("echo Hello " ^ world));
-      redirect (url (monitor jr)))
+      jr <- C.create (C.shellCommand ("sleep 2 ; find " ^ p ^ " -maxdepth 2"));
+      C.monitorX jr (fn j =>
+        case j.ExitCode of
+          |Some _ => <xml><pre>{[j.Stdout]}</pre></xml>
+          |None => <xml>Searching...</xml>)
+
+    fun main {} : transaction page =
+      s <- source <xml/>;
+      return <xml>
+        <head/>
+        <body>
+          <button value="Search files" onclick={fn _ =>
+            x <- rpc(search ".");
+            set s x
+          }/>
+          <hr/>
+          <dyn signal={signal s}/>
+        </body>
+      </xml>
+
 
 To get the sources, type:
 
@@ -32,7 +48,7 @@ To get the sources, type:
     $ cd urweb-callback
     $ make demo
 
-I have run a demo application at
+The demo application is running here
 
     http://46.38.250.132:8080/Demo2/main
 
