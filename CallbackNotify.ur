@@ -108,6 +108,6 @@ end
 structure Default = Make(
   struct
     val gc_depth = 1000
-    val stdout_sz = 1024
-    val stdin_sz = 1024
+    val stdout_sz = 10*1024
+    val stdin_sz = 10*1024
   end)
