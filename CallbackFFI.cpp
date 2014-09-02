@@ -239,9 +239,12 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
     UW_SYSTEM_PIPE_CREATE(cmd_to_ur);
     UW_SYSTEM_PIPE_CREATE(cmd_to_ur2);
 
+    dprintf("Job #%d ready to fork\n", r->key);
+
     int pid = fork(); // local var required? TODO
-    if (pid == -1)
+    if (pid == -1) {
       r->throw_c([=](oss& e) { e << "fork failed" ; });
+    }
 
     r->pid = pid;
 
@@ -396,9 +399,11 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
   catch(string &e) {
   }
   catch(std::exception &e) {
+    dprintf("Job #%d exception %s\n", r->key, e.what());
     r->err << "std::exception " << e.what();
   }
   catch(...) {
+    dprintf("Job #%d exception unknown\n", r->key);
     r->err << "C++ `...' exception";
   }
 
@@ -706,7 +711,7 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   {
     pp = new jptr(new job(jr, cmd, stdout_sz));
     get(pp)->m.lock();
-    dprintf("Job #%d create lock\n", get(pp)->key);
+    dprintf("Job #%d create lock (cmd %s)\n", get(pp)->key, cmd);
 
     jobset s;
     if(! s.insert(get(pp))) {
@@ -745,6 +750,8 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 {
 
   int jr = get(j)->key;
+
+  dprintf("Job #%d push_stdin\n", get(j)->key);
 
   if(_stdin.size > maxsz)
     uw_error(ctx, FATAL, "pushStdin: input of size %d will never fit into job #%d's buffer of size %d\n",
@@ -812,6 +819,7 @@ uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI
 
 uw_Basis_unit uw_CallbackFFI_pushArg(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string arg)
 {
+  dprintf("Job #%d push_arg\n", get(j)->key);
   if(get(j)->thread_started)
     uw_error(ctx, FATAL, "pushArg: job #%d is already running\n", get(j)->key);
   get(j)->args.push_back(arg); 
@@ -1088,6 +1096,7 @@ uw_Basis_unit uw_CallbackFFI_executeSync(
   uw_CallbackFFI_job j)
 {
   try {
+    dprintf("Job #%d executeSync\n", get(j)->key);
     execute(get(j), uw_get_loggers(ctx), NULL);
   }
   catch(job::exception &e) {
