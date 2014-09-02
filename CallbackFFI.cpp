@@ -370,11 +370,14 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
         if (FD_ISSET( ur_to_cmd[1], &wfds )) {
           ret--;
 
-          dprintf("Writing for Job #%d\n", r->key);
-
           jlock _(r);
 
-          size_t written = write(ur_to_cmd[1], &r->buf_stdin[r->sz_stdin], r->buf_stdin.size() - r->sz_stdin);
+          size_t towrite = std::min(size_t(2*1024), r->buf_stdin.size() - r->sz_stdin);
+          dprintf("Job #%d, going to write %d bytes\n", r->key, towrite);
+
+          size_t written = write(ur_to_cmd[1], &r->buf_stdin[r->sz_stdin], towrite);
+
+          dprintf("Job #%d, written %d bytes\n", r->key, written);
 
           if(written < 0) {
             if (errno == EINTR)
