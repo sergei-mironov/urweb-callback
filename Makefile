@@ -257,7 +257,6 @@ demo: ./Makefile ./demo/Demo2.db
 	echo 'link ./CallbackFFI.o' >> .cake3/tmplib.in0
 	echo 'link -lstdc++' >> .cake3/tmplib.in0
 	echo 'safeGet Callback/Default/callback' >> .cake3/tmplib.in0
-	echo 'safeGet CallbackNotify/C/callback' >> .cake3/tmplib.in0
 	echo 'safeGet CallbackNotify/Default/C/callback' >> .cake3/tmplib.in0
 	echo '' >> .cake3/tmplib.in0
 	echo '$$/list' >> .cake3/tmplib.in0

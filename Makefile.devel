@@ -257,14 +257,13 @@ demo: ./Makefile.devel ./demo/Demo2.db
 	echo 'link ./CallbackFFI.o' >> .cake3/tmplib.in0
 	echo 'link -lstdc++' >> .cake3/tmplib.in0
 	echo 'safeGet Callback/Default/callback' >> .cake3/tmplib.in0
-	echo 'safeGet CallbackNotify/C/callback' >> .cake3/tmplib.in0
 	echo 'safeGet CallbackNotify/Default/C/callback' >> .cake3/tmplib.in0
 	echo '' >> .cake3/tmplib.in0
 	echo '$$/list' >> .cake3/tmplib.in0
 	echo './Callback' >> .cake3/tmplib.in0
 	echo './CallbackNotify' >> .cake3/tmplib.in0
 	echo './CallbackNotify2' >> .cake3/tmplib.in0
-./Cakegen: ./Cakefile.hs
+./Cakegen: ./Cake_Callback.hs
 	cake3
 ./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile.devel $(call GUARD,URCPP) $(call GUARD,URINCL) $(call GUARD,UR_CFLAGS)
 	$(URCPP) -c $(UR_CFLAGS) $(URINCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
