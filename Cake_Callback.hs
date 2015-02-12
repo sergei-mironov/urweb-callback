@@ -72,7 +72,7 @@ tests = do
       ur (file "test2/Templ.ur")
       ur t
 
-main = writeMake (file "Makefile") $ do
+main = writeDefaultMakefiles $ do
 
   rule $ do
     phony "lib"

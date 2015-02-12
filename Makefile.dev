@@ -12,38 +12,38 @@ URVERSION = $(shell urweb -version)
 UR_CPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
 UR_INCL = -I$(shell urweb -print-cinclude)
 .PHONY: ./all
-./all: ./Makefile ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql ./test/Stress1.db ./test/Stress1.exe ./test/Stress1.sql ./test2/Notify.db ./test2/Notify.exe ./test2/Notify.sql ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql
-./demo/Demo2.db: ./Makefile ./demo/Demo2.exe ./demo/Demo2.sql
+./all: ./Makefile.dev ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql ./test/Stress1.db ./test/Stress1.exe ./test/Stress1.sql ./test2/Notify.db ./test2/Notify.exe ./test2/Notify.sql ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql
+./demo/Demo2.db: ./Makefile.dev ./demo/Demo2.exe ./demo/Demo2.sql
 	dropdb --if-exists Demo2
 	createdb Demo2
 	psql -f ./demo/Demo2.sql Demo2
 	touch ./demo/Demo2.db
-./test2/Notify.db: ./Makefile ./test2/Notify.exe ./test2/Notify.sql
+./test2/Notify.db: ./Makefile.dev ./test2/Notify.exe ./test2/Notify.sql
 	dropdb --if-exists Notify
 	createdb Notify
 	psql -f ./test2/Notify.sql Notify
 	touch ./test2/Notify.db
-./test2/Stress.db: ./Makefile ./test2/Stress.exe ./test2/Stress.sql
+./test2/Stress.db: ./Makefile.dev ./test2/Stress.exe ./test2/Stress.sql
 	dropdb --if-exists Stress
 	createdb Stress
 	psql -f ./test2/Stress.sql Stress
 	touch ./test2/Stress.db
-./test2/Stdout.db: ./Makefile ./test2/Stdout.exe ./test2/Stdout.sql
+./test2/Stdout.db: ./Makefile.dev ./test2/Stdout.exe ./test2/Stdout.sql
 	dropdb --if-exists Stdout
 	createdb Stdout
 	psql -f ./test2/Stdout.sql Stdout
 	touch ./test2/Stdout.db
-./test2/Simple1.db: ./Makefile ./test2/Simple1.exe ./test2/Simple1.sql
+./test2/Simple1.db: ./Makefile.dev ./test2/Simple1.exe ./test2/Simple1.sql
 	dropdb --if-exists Simple1
 	createdb Simple1
 	psql -f ./test2/Simple1.sql Simple1
 	touch ./test2/Simple1.db
-./test/Stress1.db: ./Makefile ./test/Stress1.exe ./test/Stress1.sql
+./test/Stress1.db: ./Makefile.dev ./test/Stress1.exe ./test/Stress1.sql
 	dropdb --if-exists Stress1
 	createdb Stress1
 	psql -f ./test/Stress1.sql Stress1
 	touch ./test/Stress1.db
-./.cake3/tmp___test2_Notify_in_2: ./Makefile ./lib.urp ./test2/Notify.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Notify_in_2: ./Makefile.dev ./lib.urp ./test2/Notify.ur ./test2/Templ.ur
 	( \
 	echo   ;\
 	echo $$\/list  ;\
@@ -51,7 +51,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo \.\.\/test2\/Templ  ;\
 	echo \.\.\/test2\/Notify  ;\
 	) > ./.cake3/tmp___test2_Notify_in_2
-./.cake3/tmp___test2_Notify_in_1: ./Makefile ./lib.urp ./test2/Notify.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Notify_in_1: ./Makefile.dev ./lib.urp ./test2/Notify.ur ./test2/Templ.ur
 	( \
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
@@ -81,7 +81,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo sql\ \.\.\/test2\/Notify\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Notify_in_1
-./.cake3/tmp___lib_in_2: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile
+./.cake3/tmp___lib_in_2: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile.dev
 	( \
 	echo   ;\
 	echo $$\/list  ;\
@@ -89,7 +89,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo \.\/CallbackNotify  ;\
 	echo \.\/CallbackNotify2  ;\
 	) > ./.cake3/tmp___lib_in_2
-./.cake3/tmp___lib_in_1: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile
+./.cake3/tmp___lib_in_1: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile.dev
 	( \
 	echo ffi\ \.\/CallbackFFI  ;\
 	echo include\ \.\/CallbackFFI\.h  ;\
@@ -98,7 +98,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo link\ \.\/CallbackFFI\.o  ;\
 	echo link\ \-lstdc\+\+  ;\
 	) > ./.cake3/tmp___lib_in_1
-./.cake3/tmp___test2_Stress_in_2: ./Makefile ./lib.urp ./test2/Stress.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Stress_in_2: ./Makefile.dev ./lib.urp ./test2/Stress.ur ./test2/Templ.ur
 	( \
 	echo   ;\
 	echo $$\/list  ;\
@@ -106,7 +106,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo \.\.\/test2\/Templ  ;\
 	echo \.\.\/test2\/Stress  ;\
 	) > ./.cake3/tmp___test2_Stress_in_2
-./.cake3/tmp___test2_Stress_in_1: ./Makefile ./lib.urp ./test2/Stress.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Stress_in_1: ./Makefile.dev ./lib.urp ./test2/Stress.ur ./test2/Templ.ur
 	( \
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
@@ -136,7 +136,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo sql\ \.\.\/test2\/Stress\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Stress_in_1
-./.cake3/tmp___test2_Stdout_in_2: ./Makefile ./lib.urp ./test2/Stdout.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Stdout_in_2: ./Makefile.dev ./lib.urp ./test2/Stdout.ur ./test2/Templ.ur
 	( \
 	echo   ;\
 	echo $$\/list  ;\
@@ -144,7 +144,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo \.\.\/test2\/Templ  ;\
 	echo \.\.\/test2\/Stdout  ;\
 	) > ./.cake3/tmp___test2_Stdout_in_2
-./.cake3/tmp___test2_Stdout_in_1: ./Makefile ./lib.urp ./test2/Stdout.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Stdout_in_1: ./Makefile.dev ./lib.urp ./test2/Stdout.ur ./test2/Templ.ur
 	( \
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
@@ -174,7 +174,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo sql\ \.\.\/test2\/Stdout\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Stdout_in_1
-./.cake3/tmp___test2_Simple1_in_2: ./Makefile ./lib.urp ./test2/Simple1.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Simple1_in_2: ./Makefile.dev ./lib.urp ./test2/Simple1.ur ./test2/Templ.ur
 	( \
 	echo   ;\
 	echo $$\/list  ;\
@@ -182,7 +182,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo \.\.\/test2\/Templ  ;\
 	echo \.\.\/test2\/Simple1  ;\
 	) > ./.cake3/tmp___test2_Simple1_in_2
-./.cake3/tmp___test2_Simple1_in_1: ./Makefile ./lib.urp ./test2/Simple1.ur ./test2/Templ.ur
+./.cake3/tmp___test2_Simple1_in_1: ./Makefile.dev ./lib.urp ./test2/Simple1.ur ./test2/Templ.ur
 	( \
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
@@ -212,7 +212,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo sql\ \.\.\/test2\/Simple1\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Simple1_in_1
-./.cake3/tmp___test_Stress1_in_2: ./Makefile ./lib.urp ./test/Stress1.ur ./test2/Templ.ur
+./.cake3/tmp___test_Stress1_in_2: ./Makefile.dev ./lib.urp ./test/Stress1.ur ./test2/Templ.ur
 	( \
 	echo   ;\
 	echo $$\/list  ;\
@@ -220,7 +220,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo \.\.\/test2\/Templ  ;\
 	echo \.\.\/test\/Stress1  ;\
 	) > ./.cake3/tmp___test_Stress1_in_2
-./.cake3/tmp___test_Stress1_in_1: ./Makefile ./lib.urp ./test/Stress1.ur ./test2/Templ.ur
+./.cake3/tmp___test_Stress1_in_1: ./Makefile.dev ./lib.urp ./test/Stress1.ur ./test2/Templ.ur
 	( \
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
@@ -251,8 +251,8 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test_Stress1_in_1
 .PHONY: ./demo
-./demo: ./Makefile ./demo/Demo2.db
-./.cake3/tmp___demo_Demo2_in_2: ./Makefile ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
+./demo: ./Makefile.dev ./demo/Demo2.db
+./.cake3/tmp___demo_Demo2_in_2: ./Makefile.dev ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
 	( \
 	echo   ;\
 	echo $$\/list  ;\
@@ -260,7 +260,7 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo $$\/string  ;\
 	echo \.\.\/demo\/Demo2  ;\
 	) > ./.cake3/tmp___demo_Demo2_in_2
-./.cake3/tmp___demo_Demo2_in_1: ./Makefile ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
+./.cake3/tmp___demo_Demo2_in_1: ./Makefile.dev ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
 	( \
 	echo database\ dbname\=Demo2  ;\
 	echo safeGet\ Demo2\/main  ;\
@@ -270,58 +270,62 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___demo_Demo2_in_1
 .PHONY: ./lib
-./lib: ./Makefile ./lib.urp
+./lib: ./Makefile.dev ./lib.urp
 .INTERMEDIATE: ./.fix-multy1
-./.fix-multy1: ./Makefile ./demo/Demo2.urp $(call GUARD,URVERSION)
+./.fix-multy1: ./Makefile.dev ./demo/Demo2.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./demo/Demo2
 .INTERMEDIATE: ./.fix-multy2
-./.fix-multy2: ./Makefile ./test/Stress1.urp $(call GUARD,URVERSION)
+./.fix-multy2: ./Makefile.dev ./test/Stress1.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test/Stress1
 .INTERMEDIATE: ./.fix-multy3
-./.fix-multy3: ./Makefile ./test2/Notify.urp $(call GUARD,URVERSION)
+./.fix-multy3: ./Makefile.dev ./test2/Notify.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test2/Notify
 .INTERMEDIATE: ./.fix-multy4
-./.fix-multy4: ./Makefile ./test2/Simple1.urp $(call GUARD,URVERSION)
+./.fix-multy4: ./Makefile.dev ./test2/Simple1.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test2/Simple1
 .INTERMEDIATE: ./.fix-multy5
-./.fix-multy5: ./Makefile ./test2/Stdout.urp $(call GUARD,URVERSION)
+./.fix-multy5: ./Makefile.dev ./test2/Stdout.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test2/Stdout
 .INTERMEDIATE: ./.fix-multy6
-./.fix-multy6: ./Makefile ./test2/Stress.urp $(call GUARD,URVERSION)
+./.fix-multy6: ./Makefile.dev ./test2/Stress.urp $(call GUARD,URVERSION)
 	urweb -dbms postgres ./test2/Stress
-./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile $(call GUARD,UR_CFLAGS) $(call GUARD,UR_CPP) $(call GUARD,UR_INCL)
+./Cakegen: ./Cake_Callback.hs
+	cake3
+./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile.dev $(call GUARD,UR_CFLAGS) $(call GUARD,UR_CPP) $(call GUARD,UR_INCL)
 	$(UR_CPP) -c $(UR_CFLAGS) $(UR_INCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
+./Makefile.dev: ./Cakegen
+	./Cakegen
 ./demo/Demo2.exe: ./.fix-multy1
 ./demo/Demo2.sql: ./.fix-multy1
-./demo/Demo2.urp: ./.cake3/tmp___demo_Demo2_in_1 ./.cake3/tmp___demo_Demo2_in_2 ./Makefile
+./demo/Demo2.urp: ./.cake3/tmp___demo_Demo2_in_1 ./.cake3/tmp___demo_Demo2_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___demo_Demo2_in_1 > ./demo/Demo2.urp
 	cat ./.cake3/tmp___demo_Demo2_in_2 >> ./demo/Demo2.urp
-./lib.urp: ./.cake3/tmp___lib_in_1 ./.cake3/tmp___lib_in_2 ./Makefile
+./lib.urp: ./.cake3/tmp___lib_in_1 ./.cake3/tmp___lib_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___lib_in_1 > ./lib.urp
 	cat ./.cake3/tmp___lib_in_2 >> ./lib.urp
 ./test/Stress1.exe: ./.fix-multy2
 ./test/Stress1.sql: ./.fix-multy2
-./test/Stress1.urp: ./.cake3/tmp___test_Stress1_in_1 ./.cake3/tmp___test_Stress1_in_2 ./Makefile
+./test/Stress1.urp: ./.cake3/tmp___test_Stress1_in_1 ./.cake3/tmp___test_Stress1_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___test_Stress1_in_1 > ./test/Stress1.urp
 	cat ./.cake3/tmp___test_Stress1_in_2 >> ./test/Stress1.urp
 ./test2/Notify.exe: ./.fix-multy3
 ./test2/Notify.sql: ./.fix-multy3
-./test2/Notify.urp: ./.cake3/tmp___test2_Notify_in_1 ./.cake3/tmp___test2_Notify_in_2 ./Makefile
+./test2/Notify.urp: ./.cake3/tmp___test2_Notify_in_1 ./.cake3/tmp___test2_Notify_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___test2_Notify_in_1 > ./test2/Notify.urp
 	cat ./.cake3/tmp___test2_Notify_in_2 >> ./test2/Notify.urp
 ./test2/Simple1.exe: ./.fix-multy4
 ./test2/Simple1.sql: ./.fix-multy4
-./test2/Simple1.urp: ./.cake3/tmp___test2_Simple1_in_1 ./.cake3/tmp___test2_Simple1_in_2 ./Makefile
+./test2/Simple1.urp: ./.cake3/tmp___test2_Simple1_in_1 ./.cake3/tmp___test2_Simple1_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___test2_Simple1_in_1 > ./test2/Simple1.urp
 	cat ./.cake3/tmp___test2_Simple1_in_2 >> ./test2/Simple1.urp
 ./test2/Stdout.exe: ./.fix-multy5
 ./test2/Stdout.sql: ./.fix-multy5
-./test2/Stdout.urp: ./.cake3/tmp___test2_Stdout_in_1 ./.cake3/tmp___test2_Stdout_in_2 ./Makefile
+./test2/Stdout.urp: ./.cake3/tmp___test2_Stdout_in_1 ./.cake3/tmp___test2_Stdout_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___test2_Stdout_in_1 > ./test2/Stdout.urp
 	cat ./.cake3/tmp___test2_Stdout_in_2 >> ./test2/Stdout.urp
 ./test2/Stress.exe: ./.fix-multy6
 ./test2/Stress.sql: ./.fix-multy6
-./test2/Stress.urp: ./.cake3/tmp___test2_Stress_in_1 ./.cake3/tmp___test2_Stress_in_2 ./Makefile
+./test2/Stress.urp: ./.cake3/tmp___test2_Stress_in_1 ./.cake3/tmp___test2_Stress_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___test2_Stress_in_1 > ./test2/Stress.urp
 	cat ./.cake3/tmp___test2_Stress_in_2 >> ./test2/Stress.urp
 $(call GUARD,URVERSION):
@@ -392,9 +396,13 @@ ifneq ($(MAKECMDGOALS),clean)
 .INTERMEDIATE: ./.fix-multy1
 ./.fix-multy1:
 	-mkdir .cake3
-	MAIN=1 $(MAKE) -f ./Makefile $(MAKECMDGOALS)
+	MAIN=1 $(MAKE) -f ./Makefile.dev $(MAKECMDGOALS)
+.PHONY: ./Cakegen
+./Cakegen: ./.fix-multy1
 .PHONY: ./CallbackFFI.o
 ./CallbackFFI.o: ./.fix-multy1
+.PHONY: ./Makefile.dev
+./Makefile.dev: ./.fix-multy1
 .PHONY: ./demo/Demo2.exe
 ./demo/Demo2.exe: ./.fix-multy1
 .PHONY: ./demo/Demo2.sql
@@ -437,7 +445,7 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 .PHONY: ./clean
 ./clean:
-	-rm ./.cake3/tmp___demo_Demo2_in_1 ./.cake3/tmp___demo_Demo2_in_2 ./.cake3/tmp___lib_in_1 ./.cake3/tmp___lib_in_2 ./.cake3/tmp___test2_Notify_in_1 ./.cake3/tmp___test2_Notify_in_2 ./.cake3/tmp___test2_Simple1_in_1 ./.cake3/tmp___test2_Simple1_in_2 ./.cake3/tmp___test2_Stdout_in_1 ./.cake3/tmp___test2_Stdout_in_2 ./.cake3/tmp___test2_Stress_in_1 ./.cake3/tmp___test2_Stress_in_2 ./.cake3/tmp___test_Stress1_in_1 ./.cake3/tmp___test_Stress1_in_2 ./CallbackFFI.o ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql ./demo/Demo2.urp ./lib.urp ./test/Stress1.db ./test/Stress1.exe ./test/Stress1.sql ./test/Stress1.urp ./test2/Notify.db ./test2/Notify.exe ./test2/Notify.sql ./test2/Notify.urp ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Simple1.urp ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stdout.urp ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql ./test2/Stress.urp
+	-rm ./.cake3/tmp___demo_Demo2_in_1 ./.cake3/tmp___demo_Demo2_in_2 ./.cake3/tmp___lib_in_1 ./.cake3/tmp___lib_in_2 ./.cake3/tmp___test2_Notify_in_1 ./.cake3/tmp___test2_Notify_in_2 ./.cake3/tmp___test2_Simple1_in_1 ./.cake3/tmp___test2_Simple1_in_2 ./.cake3/tmp___test2_Stdout_in_1 ./.cake3/tmp___test2_Stdout_in_2 ./.cake3/tmp___test2_Stress_in_1 ./.cake3/tmp___test2_Stress_in_2 ./.cake3/tmp___test_Stress1_in_1 ./.cake3/tmp___test_Stress1_in_2 ./Cakegen ./CallbackFFI.o ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql ./demo/Demo2.urp ./lib.urp ./test/Stress1.db ./test/Stress1.exe ./test/Stress1.sql ./test/Stress1.urp ./test2/Notify.db ./test2/Notify.exe ./test2/Notify.sql ./test2/Notify.urp ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Simple1.urp ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stdout.urp ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql ./test2/Stress.urp
 	-rm -rf .cake3
 
 endif
