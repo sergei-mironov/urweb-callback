@@ -16,13 +16,11 @@ lib = uwlib (file "lib.urp") $ do
   ur (file "CallbackNotify.ur", file "CallbackNotify.urs")
   ur (file "CallbackNotify2.ur", file "CallbackNotify2.urs")
 
-demo = uwapp "-dbms postgres" (file "demo/Demo2.urp") $ do
+(demo, demo_db) = uwapp_postgres (file "demo/Demo2.urp") $ do
   let d = file "demo/Demo2.ur"
-  database ("dbname="++(takeBaseName d))
   safeGet ((takeBaseName d)++"/main")
   safeGet ((takeBaseName d)++"/monitor")
   allow env "PING"
-  sql (d.="sql")
   library lib
   ur (sys "list")
   ur (sys "char")
@@ -37,8 +35,9 @@ tests = do
             , "test2/Stress.ur"
             , "test2/Notify.ur"
             ]
-  forM tf $ \t -> do
-    uwapp "-dbms postgres" (t.="urp") $ do
+
+  (flip map) tf $ \t -> do
+    uwapp_postgres (t.="urp") $ do
       let sg x = safeGet ((takeBaseName t) ++ "/" ++ x)
       debug
       allow url "http://code.jquery.com/ui/1.10.3/jquery-ui.js"
@@ -47,7 +46,6 @@ tests = do
       allow mime "image/jpeg"
       allow mime "image/png"
       allow mime "image/gif"
-      database ("dbname="++(takeBaseName t))
       sg "main"
       sg "job_monitor"
       sg "src_monitor"
@@ -65,7 +63,6 @@ tests = do
       sg "status"
       sg "lastline"
       sg "longrunning"
-      sql (t.="sql")
       library lib
       ur (sys "list")
       ur (sys "string")
@@ -78,25 +75,16 @@ main = writeDefaultMakefiles $ do
     phony "lib"
     depend lib
 
-  let mkdb t = rule $ do
-                let sql = urpSql (toUrp t)
-                let dbn = takeBaseName sql
-                shell [cmd|dropdb --if-exists $(string dbn)|]
-                shell [cmd|createdb $(string dbn)|]
-                shell [cmd|psql -f $(sql) $(string dbn)|]
-                shell [cmd|touch @(sql.="db")|]
-
-  d <- demo
   rule $ do
     phony "demo"
-    depend (mkdb d)
+    depend demo
+    depend demo_db
 
-  ts <- tests
   rule $ do
     phony "all"
-    depend ts
-    depend (map mkdb ts)
-    depend d
-    depend (mkdb d)
+    depend (map fst tests)
+    depend (map snd tests)
+    depend demo
+    depend demo_db
 
 

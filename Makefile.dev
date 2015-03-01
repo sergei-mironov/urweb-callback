@@ -8,9 +8,11 @@ unexport MAIN
 
 # Main section
 
-URVERSION = $(shell urweb -version)
-UR_CPP = $(shell $(shell urweb -print-ccompiler) -print-prog-name=g++)
-UR_INCL = -I$(shell urweb -print-cinclude)
+URWEB = urweb
+UWCPP = $(shell $(shell $(URWEB) -print-ccompiler) -print-prog-name=g++)
+UWFLAGS = 
+UWINCLUDE = -I$(shell $(URWEB) -print-cinclude)
+UWVER = $(shell $(URWEB) -version)
 .PHONY: ./all
 ./all: ./Makefile.dev ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql ./test/Stress1.db ./test/Stress1.exe ./test/Stress1.sql ./test2/Notify.db ./test2/Notify.exe ./test2/Notify.sql ./test2/Simple1.db ./test2/Simple1.exe ./test2/Simple1.sql ./test2/Stdout.db ./test2/Stdout.exe ./test2/Stdout.sql ./test2/Stress.db ./test2/Stress.exe ./test2/Stress.sql
 ./demo/Demo2.db: ./Makefile.dev ./demo/Demo2.exe ./demo/Demo2.sql
@@ -18,6 +20,40 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	createdb Demo2
 	psql -f ./demo/Demo2.sql Demo2
 	touch ./demo/Demo2.db
+./.cake3/tmp___demo_Demo2_in_2: ./Makefile.dev ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
+	( \
+	echo   ;\
+	echo $$\/list  ;\
+	echo $$\/char  ;\
+	echo $$\/string  ;\
+	echo \.\.\/demo\/Demo2  ;\
+	) > ./.cake3/tmp___demo_Demo2_in_2
+./.cake3/tmp___demo_Demo2_in_1: ./Makefile.dev ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
+	( \
+	echo sql\ \.\.\/demo\/Demo2\.sql  ;\
+	echo database\ dbname\=Demo2  ;\
+	echo safeGet\ Demo2\/main  ;\
+	echo safeGet\ Demo2\/monitor  ;\
+	echo allow\ env\ PING  ;\
+	echo library\ \.\.\/  ;\
+	) > ./.cake3/tmp___demo_Demo2_in_1
+./.cake3/tmp___lib_in_2: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile.dev
+	( \
+	echo   ;\
+	echo $$\/list  ;\
+	echo \.\/Callback  ;\
+	echo \.\/CallbackNotify  ;\
+	echo \.\/CallbackNotify2  ;\
+	) > ./.cake3/tmp___lib_in_2
+./.cake3/tmp___lib_in_1: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile.dev
+	( \
+	echo ffi\ \.\/CallbackFFI  ;\
+	echo include\ \.\/CallbackFFI\.h  ;\
+	echo safeGet\ Callback\/Default\/callback  ;\
+	echo safeGet\ CallbackNotify\/Default\/C\/callback  ;\
+	echo link\ \.\/CallbackFFI\.o  ;\
+	echo link\ \-lstdc\+\+  ;\
+	) > ./.cake3/tmp___lib_in_1
 ./test2/Notify.db: ./Makefile.dev ./test2/Notify.exe ./test2/Notify.sql
 	dropdb --if-exists Notify
 	createdb Notify
@@ -53,6 +89,8 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	) > ./.cake3/tmp___test2_Notify_in_2
 ./.cake3/tmp___test2_Notify_in_1: ./Makefile.dev ./lib.urp ./test2/Notify.ur ./test2/Templ.ur
 	( \
+	echo sql\ \.\.\/test2\/Notify\.sql  ;\
+	echo database\ dbname\=Notify  ;\
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
 	echo allow\ mime\ text\/javascript  ;\
@@ -60,7 +98,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo allow\ mime\ image\/jpeg  ;\
 	echo allow\ mime\ image\/png  ;\
 	echo allow\ mime\ image\/gif  ;\
-	echo database\ dbname\=Notify  ;\
 	echo safeGet\ Notify\/main  ;\
 	echo safeGet\ Notify\/job\_monitor  ;\
 	echo safeGet\ Notify\/src\_monitor  ;\
@@ -78,26 +115,8 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo safeGet\ Notify\/status  ;\
 	echo safeGet\ Notify\/lastline  ;\
 	echo safeGet\ Notify\/longrunning  ;\
-	echo sql\ \.\.\/test2\/Notify\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Notify_in_1
-./.cake3/tmp___lib_in_2: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile.dev
-	( \
-	echo   ;\
-	echo $$\/list  ;\
-	echo \.\/Callback  ;\
-	echo \.\/CallbackNotify  ;\
-	echo \.\/CallbackNotify2  ;\
-	) > ./.cake3/tmp___lib_in_2
-./.cake3/tmp___lib_in_1: ./Callback.ur ./Callback.urs ./CallbackFFI.h ./CallbackFFI.o ./CallbackNotify.ur ./CallbackNotify.urs ./CallbackNotify2.ur ./CallbackNotify2.urs ./Makefile.dev
-	( \
-	echo ffi\ \.\/CallbackFFI  ;\
-	echo include\ \.\/CallbackFFI\.h  ;\
-	echo safeGet\ Callback\/Default\/callback  ;\
-	echo safeGet\ CallbackNotify\/Default\/C\/callback  ;\
-	echo link\ \.\/CallbackFFI\.o  ;\
-	echo link\ \-lstdc\+\+  ;\
-	) > ./.cake3/tmp___lib_in_1
 ./.cake3/tmp___test2_Stress_in_2: ./Makefile.dev ./lib.urp ./test2/Stress.ur ./test2/Templ.ur
 	( \
 	echo   ;\
@@ -108,6 +127,8 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	) > ./.cake3/tmp___test2_Stress_in_2
 ./.cake3/tmp___test2_Stress_in_1: ./Makefile.dev ./lib.urp ./test2/Stress.ur ./test2/Templ.ur
 	( \
+	echo sql\ \.\.\/test2\/Stress\.sql  ;\
+	echo database\ dbname\=Stress  ;\
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
 	echo allow\ mime\ text\/javascript  ;\
@@ -115,7 +136,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo allow\ mime\ image\/jpeg  ;\
 	echo allow\ mime\ image\/png  ;\
 	echo allow\ mime\ image\/gif  ;\
-	echo database\ dbname\=Stress  ;\
 	echo safeGet\ Stress\/main  ;\
 	echo safeGet\ Stress\/job\_monitor  ;\
 	echo safeGet\ Stress\/src\_monitor  ;\
@@ -133,7 +153,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo safeGet\ Stress\/status  ;\
 	echo safeGet\ Stress\/lastline  ;\
 	echo safeGet\ Stress\/longrunning  ;\
-	echo sql\ \.\.\/test2\/Stress\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Stress_in_1
 ./.cake3/tmp___test2_Stdout_in_2: ./Makefile.dev ./lib.urp ./test2/Stdout.ur ./test2/Templ.ur
@@ -146,6 +165,8 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	) > ./.cake3/tmp___test2_Stdout_in_2
 ./.cake3/tmp___test2_Stdout_in_1: ./Makefile.dev ./lib.urp ./test2/Stdout.ur ./test2/Templ.ur
 	( \
+	echo sql\ \.\.\/test2\/Stdout\.sql  ;\
+	echo database\ dbname\=Stdout  ;\
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
 	echo allow\ mime\ text\/javascript  ;\
@@ -153,7 +174,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo allow\ mime\ image\/jpeg  ;\
 	echo allow\ mime\ image\/png  ;\
 	echo allow\ mime\ image\/gif  ;\
-	echo database\ dbname\=Stdout  ;\
 	echo safeGet\ Stdout\/main  ;\
 	echo safeGet\ Stdout\/job\_monitor  ;\
 	echo safeGet\ Stdout\/src\_monitor  ;\
@@ -171,7 +191,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo safeGet\ Stdout\/status  ;\
 	echo safeGet\ Stdout\/lastline  ;\
 	echo safeGet\ Stdout\/longrunning  ;\
-	echo sql\ \.\.\/test2\/Stdout\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Stdout_in_1
 ./.cake3/tmp___test2_Simple1_in_2: ./Makefile.dev ./lib.urp ./test2/Simple1.ur ./test2/Templ.ur
@@ -184,6 +203,8 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	) > ./.cake3/tmp___test2_Simple1_in_2
 ./.cake3/tmp___test2_Simple1_in_1: ./Makefile.dev ./lib.urp ./test2/Simple1.ur ./test2/Templ.ur
 	( \
+	echo sql\ \.\.\/test2\/Simple1\.sql  ;\
+	echo database\ dbname\=Simple1  ;\
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
 	echo allow\ mime\ text\/javascript  ;\
@@ -191,7 +212,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo allow\ mime\ image\/jpeg  ;\
 	echo allow\ mime\ image\/png  ;\
 	echo allow\ mime\ image\/gif  ;\
-	echo database\ dbname\=Simple1  ;\
 	echo safeGet\ Simple1\/main  ;\
 	echo safeGet\ Simple1\/job\_monitor  ;\
 	echo safeGet\ Simple1\/src\_monitor  ;\
@@ -209,7 +229,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo safeGet\ Simple1\/status  ;\
 	echo safeGet\ Simple1\/lastline  ;\
 	echo safeGet\ Simple1\/longrunning  ;\
-	echo sql\ \.\.\/test2\/Simple1\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test2_Simple1_in_1
 ./.cake3/tmp___test_Stress1_in_2: ./Makefile.dev ./lib.urp ./test/Stress1.ur ./test2/Templ.ur
@@ -222,6 +241,8 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	) > ./.cake3/tmp___test_Stress1_in_2
 ./.cake3/tmp___test_Stress1_in_1: ./Makefile.dev ./lib.urp ./test/Stress1.ur ./test2/Templ.ur
 	( \
+	echo sql\ \.\.\/test\/Stress1\.sql  ;\
+	echo database\ dbname\=Stress1  ;\
 	echo debug  ;\
 	echo allow\ url\ http\:\/\/code\.jquery\.com\/ui\/1\.10\.3\/jquery\-ui\.js  ;\
 	echo allow\ mime\ text\/javascript  ;\
@@ -229,7 +250,6 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo allow\ mime\ image\/jpeg  ;\
 	echo allow\ mime\ image\/png  ;\
 	echo allow\ mime\ image\/gif  ;\
-	echo database\ dbname\=Stress1  ;\
 	echo safeGet\ Stress1\/main  ;\
 	echo safeGet\ Stress1\/job\_monitor  ;\
 	echo safeGet\ Stress1\/src\_monitor  ;\
@@ -247,52 +267,34 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 	echo safeGet\ Stress1\/status  ;\
 	echo safeGet\ Stress1\/lastline  ;\
 	echo safeGet\ Stress1\/longrunning  ;\
-	echo sql\ \.\.\/test\/Stress1\.sql  ;\
 	echo library\ \.\.\/  ;\
 	) > ./.cake3/tmp___test_Stress1_in_1
 .PHONY: ./demo
-./demo: ./Makefile.dev ./demo/Demo2.db
-./.cake3/tmp___demo_Demo2_in_2: ./Makefile.dev ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
-	( \
-	echo   ;\
-	echo $$\/list  ;\
-	echo $$\/char  ;\
-	echo $$\/string  ;\
-	echo \.\.\/demo\/Demo2  ;\
-	) > ./.cake3/tmp___demo_Demo2_in_2
-./.cake3/tmp___demo_Demo2_in_1: ./Makefile.dev ./demo/Demo2.ur ./demo/Demo2.urs ./lib.urp
-	( \
-	echo database\ dbname\=Demo2  ;\
-	echo safeGet\ Demo2\/main  ;\
-	echo safeGet\ Demo2\/monitor  ;\
-	echo allow\ env\ PING  ;\
-	echo sql\ \.\.\/demo\/Demo2\.sql  ;\
-	echo library\ \.\.\/  ;\
-	) > ./.cake3/tmp___demo_Demo2_in_1
+./demo: ./Makefile.dev ./demo/Demo2.db ./demo/Demo2.exe ./demo/Demo2.sql
 .PHONY: ./lib
 ./lib: ./Makefile.dev ./lib.urp
 .INTERMEDIATE: ./.fix-multy1
-./.fix-multy1: ./Makefile.dev ./demo/Demo2.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./demo/Demo2
+./.fix-multy1: ./Makefile.dev ./demo/Demo2.urp $(call GUARD,URWEB) $(call GUARD,UWFLAGS) $(call GUARD,UWVER)
+	$(URWEB) -dbms postgres $(UWFLAGS) ./demo/Demo2
 .INTERMEDIATE: ./.fix-multy2
-./.fix-multy2: ./Makefile.dev ./test/Stress1.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test/Stress1
+./.fix-multy2: ./Makefile.dev ./test/Stress1.urp $(call GUARD,URWEB) $(call GUARD,UWFLAGS) $(call GUARD,UWVER)
+	$(URWEB) -dbms postgres $(UWFLAGS) ./test/Stress1
 .INTERMEDIATE: ./.fix-multy3
-./.fix-multy3: ./Makefile.dev ./test2/Notify.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test2/Notify
+./.fix-multy3: ./Makefile.dev ./test2/Notify.urp $(call GUARD,URWEB) $(call GUARD,UWFLAGS) $(call GUARD,UWVER)
+	$(URWEB) -dbms postgres $(UWFLAGS) ./test2/Notify
 .INTERMEDIATE: ./.fix-multy4
-./.fix-multy4: ./Makefile.dev ./test2/Simple1.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test2/Simple1
+./.fix-multy4: ./Makefile.dev ./test2/Simple1.urp $(call GUARD,URWEB) $(call GUARD,UWFLAGS) $(call GUARD,UWVER)
+	$(URWEB) -dbms postgres $(UWFLAGS) ./test2/Simple1
 .INTERMEDIATE: ./.fix-multy5
-./.fix-multy5: ./Makefile.dev ./test2/Stdout.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test2/Stdout
+./.fix-multy5: ./Makefile.dev ./test2/Stdout.urp $(call GUARD,URWEB) $(call GUARD,UWFLAGS) $(call GUARD,UWVER)
+	$(URWEB) -dbms postgres $(UWFLAGS) ./test2/Stdout
 .INTERMEDIATE: ./.fix-multy6
-./.fix-multy6: ./Makefile.dev ./test2/Stress.urp $(call GUARD,URVERSION)
-	urweb -dbms postgres ./test2/Stress
+./.fix-multy6: ./Makefile.dev ./test2/Stress.urp $(call GUARD,URWEB) $(call GUARD,UWFLAGS) $(call GUARD,UWVER)
+	$(URWEB) -dbms postgres $(UWFLAGS) ./test2/Stress
 ./Cakegen: ./Cake_Callback.hs
 	cake3
-./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile.dev $(call GUARD,UR_CFLAGS) $(call GUARD,UR_CPP) $(call GUARD,UR_INCL)
-	$(UR_CPP) -c $(UR_CFLAGS) $(UR_INCL) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
+./CallbackFFI.o: ./CallbackFFI.cpp ./Makefile.dev $(call GUARD,UWCFLAGS) $(call GUARD,UWCPP) $(call GUARD,UWINCLUDE)
+	$(UWCPP) -c $(UWCFLAGS) $(UWINCLUDE) -std=c++11 -o ./CallbackFFI.o ./CallbackFFI.cpp
 ./Makefile.dev: ./Cakegen
 	./Cakegen
 ./demo/Demo2.exe: ./.fix-multy1
@@ -328,17 +330,23 @@ UR_INCL = -I$(shell urweb -print-cinclude)
 ./test2/Stress.urp: ./.cake3/tmp___test2_Stress_in_1 ./.cake3/tmp___test2_Stress_in_2 ./Makefile.dev
 	cat ./.cake3/tmp___test2_Stress_in_1 > ./test2/Stress.urp
 	cat ./.cake3/tmp___test2_Stress_in_2 >> ./test2/Stress.urp
-$(call GUARD,URVERSION):
-	rm -f .cake3/GUARD_URVERSION_*
+$(call GUARD,URWEB):
+	rm -f .cake3/GUARD_URWEB_*
 	touch $@
-$(call GUARD,UR_CFLAGS):
-	rm -f .cake3/GUARD_UR_CFLAGS_*
+$(call GUARD,UWCFLAGS):
+	rm -f .cake3/GUARD_UWCFLAGS_*
 	touch $@
-$(call GUARD,UR_CPP):
-	rm -f .cake3/GUARD_UR_CPP_*
+$(call GUARD,UWCPP):
+	rm -f .cake3/GUARD_UWCPP_*
 	touch $@
-$(call GUARD,UR_INCL):
-	rm -f .cake3/GUARD_UR_INCL_*
+$(call GUARD,UWFLAGS):
+	rm -f .cake3/GUARD_UWFLAGS_*
+	touch $@
+$(call GUARD,UWINCLUDE):
+	rm -f .cake3/GUARD_UWINCLUDE_*
+	touch $@
+$(call GUARD,UWVER):
+	rm -f .cake3/GUARD_UWVER_*
 	touch $@
 
 else
@@ -351,6 +359,14 @@ ifneq ($(MAKECMDGOALS),clean)
 ./all: ./.fix-multy1
 .PHONY: ./demo/Demo2.db
 ./demo/Demo2.db: ./.fix-multy1
+.PHONY: ./.cake3/tmp___demo_Demo2_in_2
+./.cake3/tmp___demo_Demo2_in_2: ./.fix-multy1
+.PHONY: ./.cake3/tmp___demo_Demo2_in_1
+./.cake3/tmp___demo_Demo2_in_1: ./.fix-multy1
+.PHONY: ./.cake3/tmp___lib_in_2
+./.cake3/tmp___lib_in_2: ./.fix-multy1
+.PHONY: ./.cake3/tmp___lib_in_1
+./.cake3/tmp___lib_in_1: ./.fix-multy1
 .PHONY: ./test2/Notify.db
 ./test2/Notify.db: ./.fix-multy1
 .PHONY: ./test2/Stress.db
@@ -365,10 +381,6 @@ ifneq ($(MAKECMDGOALS),clean)
 ./.cake3/tmp___test2_Notify_in_2: ./.fix-multy1
 .PHONY: ./.cake3/tmp___test2_Notify_in_1
 ./.cake3/tmp___test2_Notify_in_1: ./.fix-multy1
-.PHONY: ./.cake3/tmp___lib_in_2
-./.cake3/tmp___lib_in_2: ./.fix-multy1
-.PHONY: ./.cake3/tmp___lib_in_1
-./.cake3/tmp___lib_in_1: ./.fix-multy1
 .PHONY: ./.cake3/tmp___test2_Stress_in_2
 ./.cake3/tmp___test2_Stress_in_2: ./.fix-multy1
 .PHONY: ./.cake3/tmp___test2_Stress_in_1
@@ -387,10 +399,6 @@ ifneq ($(MAKECMDGOALS),clean)
 ./.cake3/tmp___test_Stress1_in_1: ./.fix-multy1
 .PHONY: ./demo
 ./demo: ./.fix-multy1
-.PHONY: ./.cake3/tmp___demo_Demo2_in_2
-./.cake3/tmp___demo_Demo2_in_2: ./.fix-multy1
-.PHONY: ./.cake3/tmp___demo_Demo2_in_1
-./.cake3/tmp___demo_Demo2_in_1: ./.fix-multy1
 .PHONY: ./lib
 ./lib: ./.fix-multy1
 .INTERMEDIATE: ./.fix-multy1
