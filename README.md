@@ -25,17 +25,17 @@ Follow the instructions below:
 
               # (skip this line to stay on latets Ur/Web)
         $ hg checkout 3dd041b00087
-    
+
         $ ./autogen.sh
         $ ./configure
         $ make install
         $ cd ..
 
 3. Build the urweb-callback
- 
+
         $ cd urweb-callback
         $ make
-     
+
 Note: gcc supporting C++11 is required to compile the library.
 
 
@@ -48,7 +48,7 @@ modules define the secons and third levels.
 
 ### Callback module
 
-The poll-based functionality. Module provides Make and Default functors. 
+The poll-based functionality. Module provides Make and Default functors.
 
 _Callback.Make_ functor acceppts the following parameters:
 
@@ -152,7 +152,7 @@ notification. It adds to the Callback API the following functions:
 Example
 -------
 
-Below is an example appication demonstrating the Callback API usage. This application 
+Below is an example appication demonstrating the Callback API usage. This application
 starts the shell script which sleeps 2 second and then finds all files in the
 current directory
 
@@ -202,7 +202,7 @@ Testing
 ./test2 folder contains an automatic test script. To run the tests, do
 
     $ ./test2/run.sh
- 
+
 Upon completion, the script should print SUCCESS to the terminal. See
 ./test2/\*log files for testing logs.
 
