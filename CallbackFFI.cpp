@@ -562,22 +562,22 @@ public:
             fk = uw_begin(ctx, path);
 
             if (fk == FATAL ) {
-              ls->log_error(ls->logger_data, "[CB] Fatal error: job #%d text '%s'\n",
+              ls->log_error(ls->logger_data, "[CB] Fatal error: lost job #%d text '%s'\n",
                 j->key, uw_error_message(ctx));
 
               if (uw_rollback(ctx, 0)) {
-                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: job #%d\n", j->key);
+                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: lost job #%d\n", j->key);
               }
               break;
             }
-            
+
             /* FIXME: BOUNDER RETRIES are treated as unlimited retries here */
             if( fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY) {
               ls->log_debug(ls->logger_data, "[CB] Error triggers unlimited retry: job #%d text '%s'\n",
                 j->key, uw_error_message(ctx));
 
               if (uw_rollback(ctx, 1)) {
-                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: job #%d\n", j->key);
+                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: lost job #%d\n", j->key);
                 break;
               }
 
@@ -825,7 +825,7 @@ uw_Basis_unit uw_CallbackFFI_pushArg(struct uw_context *ctx, uw_CallbackFFI_job 
   dprintf("Job #%d push_arg\n", get(j)->key);
   if(get(j)->thread_started)
     uw_error(ctx, FATAL, "pushArg: job #%d is already running\n", get(j)->key);
-  get(j)->args.push_back(arg); 
+  get(j)->args.push_back(arg);
   get(j)->cmd_and_args += (string(" ") + arg);
 }
 

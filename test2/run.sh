@@ -7,7 +7,7 @@ PORT=9090
 U=127.0.0.1:$PORT
 WGET_ARGS="-t 1 -T 3 -O - -S "
 TEST="run.sh:"
-TD=`dirname $0`
+# TD=`dirname $0`
 silent() { $@ >/dev/null 2>&1 ; }
 noerr() { $@ 2>/dev/null ; }
 tolog() { $@ 2>&1 ; }
@@ -54,18 +54,24 @@ begin() {
 # MAIN PART
 #
 
+# set -x
 
 # Force re-creation of the databases
-cd $TD
+# cd $TD
 rm *db
-make -C .. || die "Make failed"
+# make -C .. || die "Make failed"
+nix-build build.nix -A tests
+cp -f ./result*/*exe .
+for f in ./result*/mkdb.sh ; do
+  $f || die "Failed to create databases"
+done
 
 {
 date
 begin "./Simple1.exe"
 
   KEY=787
-  
+
   msg "PID is $PID"
   msg "Starting wget pack"
   for i in `seq 1 1 30` ; do
@@ -125,8 +131,8 @@ begin "./Stress.exe"
   done
 
   msg "Done stress testing"
-  
-  for i in `seq 1 1 20` ; do
+
+  for i in `seq 1 1 60` ; do
 
     noerr wget $WGET_ARGS $U/Stress/cnt | grep '<body>1</body>' && {
       msg "Got zero"
@@ -134,9 +140,13 @@ begin "./Stress.exe"
     }
 
     if test "$i" = "10" ; then
-      die "Resource leak"
+      msg "Resource leak at $i"
     else
       sleep 0.5
+    fi
+
+    if test "$i" = "60" ; then
+      msg "Tired waiting"
     fi
   done
 
