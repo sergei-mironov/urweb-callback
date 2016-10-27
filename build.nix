@@ -28,7 +28,7 @@ rec {
     ];
   };
 
-  demo =
+  callback-demo =
     mkExe {
       name = "CallbackDemo";
       dbms = "sqlite";
