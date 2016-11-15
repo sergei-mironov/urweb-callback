@@ -9,4 +9,5 @@ Cakegen
 *.sql
 *.o
 *.log
-result
+result*
+*journal

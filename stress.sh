@@ -7,7 +7,7 @@ fi
 
 URL="http://localhost:$PORT/Stress/viewsrc/.2E.2Ftest.2FTest6.2Eur"
 
-for i in `seq 1 1 50` ; do 
+for i in `seq 1 1 50` ; do
 
   wget -S -O -  "$URL" /dev/null &
 
