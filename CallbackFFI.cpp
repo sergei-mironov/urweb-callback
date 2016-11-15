@@ -97,13 +97,13 @@ struct job {
 
     atomic_counter c;
     c.get()++;
-    dprintf("Hello job #%d (cnt %d)\n", key, c.get());
+    dprintf("Hello job #%ld (cnt %d)\n", key, c.get());
   }
 
   ~job() {
     atomic_counter c;
     c.get()--;
-    dprintf("Bye-bye job #%d (cnt %d)\n", key, c.get());
+    dprintf("Bye-bye job #%ld (cnt %d)\n", key, c.get());
   }
 
   jkey key;
@@ -239,7 +239,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
     UW_SYSTEM_PIPE_CREATE(cmd_to_ur);
     UW_SYSTEM_PIPE_CREATE(cmd_to_ur2);
 
-    dprintf("Job #%d ready to fork\n", r->key);
+    dprintf("Job #%ld ready to fork\n", r->key);
 
     int pid = fork(); // local var required? TODO
     if (pid == -1) {
@@ -249,25 +249,39 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
     r->pid = pid;
 
     if (r->pid == 0) {
-      /* child
-       * TODO: should be closing all fds ? but the ones being used? */
+      /* Child */
+      /* TODO: should be closing all fds ? but the ones being used? */
       close(ur_to_cmd[1]);
       close(cmd_to_ur[0]);
       close(cmd_to_ur2[0]);
 
+      int fd2;
+
       /* assign stdin */
       close(0);
-      dup(ur_to_cmd[0]);
+      fd2 = dup(ur_to_cmd[0]);
+      if(fd2 != 0) {
+        fprintf(stderr, "unexpected dup() behavior, fd!=0\n");
+        exit(8);
+      }
       close(ur_to_cmd[0]);
 
       /* assign stdout */
       close(1);
-      dup(cmd_to_ur[1]);
+      fd2 = dup(cmd_to_ur[1]);
+      if(fd2 != 1) {
+        fprintf(stderr, "unexpected dup() behavior, fd!=1\n");
+        exit(8);
+      }
       close(cmd_to_ur[1]);
 
       /* assign stderr */
       close(2);
-      dup(cmd_to_ur2[1]);
+      fd2 = dup(cmd_to_ur2[1]);
+      if(fd2 != 2) {
+        fprintf(stderr, "unexpected dup() behavior, fd!=2\n");
+        exit(8);
+      }
       close(cmd_to_ur2[1]);
 
 #if 0
@@ -299,7 +313,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
         argv[argc] = NULL;
         execv(cmd, argv);
       }
-      fprintf(stderr, "execv '%s': %m\n", r->cmd.c_str());
+      fprintf(stderr, "execv '%s' failed: %m\n", r->cmd.c_str());
       exit(1);
     }
     else {
@@ -373,11 +387,11 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
           jlock _(r);
 
           size_t towrite = std::min(size_t(2*1024), r->buf_stdin.size() - r->sz_stdin);
-          dprintf("Job #%d, going to write %d bytes\n", r->key, towrite);
+          dprintf("Job #%ld, going to write %lu bytes\n", r->key, towrite);
 
           size_t written = write(ur_to_cmd[1], &r->buf_stdin[r->sz_stdin], towrite);
 
-          dprintf("Job #%d, written %d bytes\n", r->key, written);
+          dprintf("Job #%ld, written %lu bytes\n", r->key, written);
 
           if(written < 0) {
             if (errno == EINTR)
@@ -400,18 +414,19 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
     }
   }
   catch(string &e) {
+    ls->log_error(ls->logger_data, "Job #%ld exception: %s\n", r->key, e.c_str());
   }
   catch(std::exception &e) {
-    dprintf("Job #%d exception %s\n", r->key, e.what());
+    ls->log_error(ls->logger_data, "Job #%ld std::exception: %s\n", r->key, e.what());
     r->err << "std::exception " << e.what();
   }
   catch(...) {
-    dprintf("Job #%d exception unknown\n", r->key);
+    ls->log_error(ls->logger_data, "Job #%ld unknown exception\n", r->key);
     r->err << "C++ `...' exception";
   }
 
   if(r->err.str().size() > 0)
-    dprintf("Job #%d's main loop executed with errors: %s\n", r->err.str().c_str());
+    ls->log_error(ls->logger_data,"Job #%ld's main loop executed with errors: %s\n", r->key, r->err.str().c_str());
 
   if (r->pid != -1) {
     int status;
@@ -419,14 +434,14 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
     jlock _(r);
     if (rc == -1){
-      dprintf("Job #%d waitpid() failed with %m\n", r->key);
+      dprintf("Job #%ld waitpid() failed with %m\n", r->key);
     } else if (rc == r->pid) {
       if(WIFSIGNALED(status))
         r->exitcode = -WTERMSIG(status);
       else
         r->exitcode = WEXITSTATUS(status);
     } else {
-      dprintf("Job #%d waitpid unexpected result code %d\n", r->key, rc);
+      dprintf("Job #%ld waitpid unexpected result code %d\n", r->key, rc);
     }
   }
 
@@ -676,10 +691,10 @@ public:
       i->second.pop_front();
       if(i->second.size() == 0) {
         jm.erase(i);
-        dprintf("jobset: removing #%d (finally)\n", j->key);
+        dprintf("jobset: removing #%ld (finally)\n", j->key);
       }
       else {
-        dprintf("jobset: removing #%d\n", j->key);
+        dprintf("jobset: removing #%ld\n", j->key);
       }
     }
   }
@@ -733,7 +748,7 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   {
     pp = new jptr(new job(jr, cmd, stdout_sz));
     get(pp)->m.lock();
-    dprintf("Job #%d create lock (cmd %s)\n", get(pp)->key, cmd);
+    dprintf("Job #%ld create lock (cmd %s)\n", get(pp)->key, cmd);
 
     jobset s;
     if(! s.insert(get(pp))) {
@@ -750,7 +765,7 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
       jobset s;
       s.remove(get(pp));
       get(pp)->m.unlock();
-      dprintf("Job #%d create unlock\n", get(pp)->key);
+      dprintf("Job #%ld create unlock\n", get(pp)->key);
       delete ((jptr*)pp);
     });
 
@@ -773,7 +788,7 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 
   int jr = get(j)->key;
 
-  dprintf("Job #%d push_stdin\n", get(j)->key);
+  dprintf("Job #%ld push_stdin\n", get(j)->key);
 
   if(_stdin.size > maxsz)
     uw_error(ctx, FATAL, "pushStdin: input of size %d will never fit into job #%d's buffer of size %d\n",
@@ -801,7 +816,7 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
           }
         }
         else {
-          dprintf("pushStdin: stdin.size == 0, doing nothing\n", ret);
+          dprintf("pushStdin: stdin.size == 0, doing nothing\n");
         }
         ret = ok;
       }
@@ -841,7 +856,7 @@ uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI
 
 uw_Basis_unit uw_CallbackFFI_pushArg(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string arg)
 {
-  dprintf("Job #%d push_arg\n", get(j)->key);
+  dprintf("Job #%ld push_arg\n", get(j)->key);
   if(get(j)->thread_started)
     uw_error(ctx, FATAL, "pushArg: job #%d is already running\n", get(j)->key);
   get(j)->args.push_back(arg);
@@ -878,6 +893,7 @@ struct pack {
   uw_loggers *lg;
 };
 
+/* Run the job in separate thread. Call one of notifier threads when its done */
 uw_Basis_unit uw_CallbackFFI_run(
   struct uw_context *ctx,
   uw_CallbackFFI_job _j)
@@ -915,12 +931,7 @@ uw_Basis_unit uw_CallbackFFI_run(
 
         p->j->thread_started = true;
 
-        try {
-          execute(p->j, p->lg, &oldss);
-        }
-        catch(job::exception &e) {
-          dprintf("CallbackFFI execute: %s\n", e.c_str());
-        }
+        execute(p->j, p->lg, &oldss);
 
         {
           jlock _(p->j);
@@ -935,7 +946,7 @@ uw_Basis_unit uw_CallbackFFI_run(
       }, p);
 
       if(ret != 0) {
-        dprintf("CallbackFFI execute: bad state for #%d\n", p->j->key);
+        dprintf("[CB] execute: bad state for #%ld\n", p->j->key);
         p->j->exitcode = INT_MAX;
         delete p;
       }
@@ -984,11 +995,11 @@ uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackF
 
   if(pp) {
     get(pp)->m.lock();
-    dprintf("Job #%d deref lock\n", get(pp)->key);
+    dprintf("Job #%ld deref lock\n", get(pp)->key);
 
     uw_register_transactional(ctx, pp, NULL, NULL,
       [](void* pp, int) {
-        dprintf("Job #%d deref unlock\n", get(pp)->key);
+        dprintf("Job #%ld deref unlock\n", get(pp)->key);
         get(pp)->m.unlock();
         delete ((jptr*)pp);
       });
@@ -1117,13 +1128,8 @@ uw_Basis_unit uw_CallbackFFI_executeSync(
   struct uw_context *ctx,
   uw_CallbackFFI_job j)
 {
-  try {
-    dprintf("Job #%d executeSync\n", get(j)->key);
-    execute(get(j), uw_get_loggers(ctx), NULL);
-  }
-  catch(job::exception &e) {
-    dprintf("CallbackFFI::executeSync error: %s\n", e.c_str());
-  }
+  dprintf("Job #%ld executeSync\n", get(j)->key);
+  execute(get(j), uw_get_loggers(ctx), NULL);
 }
 
 uw_Basis_unit uw_CallbackFFI_forceBoundedRetry(struct uw_context *ctx, uw_Basis_string msg)

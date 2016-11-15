@@ -50,7 +50,7 @@ rec {
 
   mktest = name : file : (mkExe {
       name = name;
-      dbms = "postgres";
+      dbms = "sqlite";
 
       libraries = {
         inherit callback;
@@ -75,6 +75,7 @@ rec {
     (mktest "Simple1" ./test2/Simple1.ur)
     (mktest "Stdout" ./test2/Stdout.ur)
     (mktest "Stress" ./test2/Stress.ur)
+    (mktest "Notify" ./test2/Notify.ur)
   ];
 
 }

@@ -47,7 +47,7 @@ fun checkString (f:string -> bool) (s:string) : transaction string =
 
 fun shellCommand_ s =
   {Cmd = "/bin/sh", Stdin = Chunk (textBlob "", Some EOF), Args = "-c" :: s :: [] }
-  
+
 fun absCommand_ cmd args =
   {Cmd = cmd, Stdin = Chunk (textBlob "", Some EOF), Args = args}
 

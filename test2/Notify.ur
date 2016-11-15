@@ -1,12 +1,16 @@
 structure CB = Callback
 structure C = CallbackNotify.Default
 
-fun search (p:string) : transaction xbody =
+fun search (path:string) : transaction xbody =
   x <- C.abortMore 20;
-  jr <- C.create (C.shellCommand ("sleep 2 ; find " ^ p ^ " -maxdepth 2"));
+  jr <- C.create (C.shellCommand ("sleep 2 ; find " ^ path ^ " -maxdepth 2"));
   C.monitorX jr (fn j =>
     case j.ExitCode of
-      |Some _ => <xml><pre>{[j.Stdout]}</pre></xml>
+      |Some _ => <xml>
+          <p>Result:{[j.ExitCode]}</p>
+          <p>Stdout:<pre>{[j.Stdout]}</pre></p>
+          <p>Stderr:<pre>{[j.Stderr]}</pre></p>
+        </xml>
       |None => <xml>Searching...</xml>)
 
 fun main {} : transaction page =

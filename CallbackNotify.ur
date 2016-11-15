@@ -65,12 +65,12 @@ struct
 
     val callback = fn (ji:record Callback.jobrec) =>
       query1 (SELECT * FROM handles WHERE handles.JobRef = {[ji.JobRef]}) (fn r s =>
-        debug "COmplete and send the job";
+        debug ("[CB] Got callback from job #" ^ (show ji.JobRef));
         send r.Channel (portJob ji) ;
         return s) {};
       dml (DELETE FROM handles WHERE JobRef = {[ji.JobRef]});
       return {}
-    
+
   end)
 
   val nextJobRef = C.nextJobRef
@@ -83,7 +83,7 @@ struct
 
   val absCommand = C.absCommand
 
-  fun monitor jr = 
+  fun monitor jr =
     r <- C.get jr;
     case r.ExitCode of
       |None =>
