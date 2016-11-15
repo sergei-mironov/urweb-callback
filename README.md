@@ -1,16 +1,15 @@
 Urweb-callback
 --------------
 
-Urweb-callback is a library for managing asynchronous processes directly from an
-[Ur/Web](http://www.impredicative.com/ur/) application. Online example should be accessible
-[here](http://sthdwp.com/Demo2/main)
-
+Urweb-callback is a library for managing asynchronous processes directly from
+an [Ur/Web](http://www.impredicative.com/ur/) application.
+[Live example](http://sthdwp.com/Demo2/main) should be accessible.
 
 Installation
 ------------
 
-Building requires [Nix](www.nixos.org/nix) package manager to be installed and
-[urweb-build](http://github.com/grwlf/urweb-build) instruction set available
+The Project requires [Nix](www.nixos.org/nix) package manager to be installed and
+[urweb-build](http://github.com/grwlf/urweb-build) expression available
 via NIX\_PATH variable.
 
         $ git clone https://github.com/grwlf/urweb-callback
