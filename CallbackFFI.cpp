@@ -500,12 +500,12 @@ public:
         int ret;
         uw_loggers *ls = g.lg;
 
-        ls->log_debug(ls->logger_data, "CallbackFFI: Starting new thread\n");
+        ls->log_debug(ls->logger_data, "[CB] Starting new thread\n");
 
         uw_context* ctx = uw_init(-(int)tn, ls);
         ret = uw_set_app(ctx, g.app);
         if(ret != 0) {
-          ls->log_error(ls->logger_data, "CallbackFFI: failed to set the app (ret %d)\n", ret);
+          ls->log_error(ls->logger_data, "[CB] failed to set the app (ret %d)\n", ret);
           uw_free(ctx);
           return NULL;
         }
@@ -521,88 +521,93 @@ public:
         while(1) {
           fk = uw_begin_init(ctx);
           if (fk == SUCCESS) {
-            ls->log_debug(ls->logger_data, "Database connection initialized.\n");
+            ls->log_debug(ls->logger_data, "[CB] Database connection initialized.\n");
             ok = true;
             break;
           } else if (fk == BOUNDED_RETRY) {
             if (retries_left) {
-              ls->log_debug(ls->logger_data, "Initialization error triggers bounded retry: %s\n", uw_error_message(ctx));
+              ls->log_debug(ls->logger_data, "[CB] Initialization error triggers bounded retry: %s\n", uw_error_message(ctx));
               --retries_left;
             } else {
-              ls->log_error(ls->logger_data, "Fatal initialization error (out of retries): %s\n", uw_error_message(ctx));
+              ls->log_error(ls->logger_data, "[CB] Fatal initialization error (out of retries): %s\n", uw_error_message(ctx));
               break;
             }
-          } else if (fk == UNLIMITED_RETRY)
-            ls->log_debug(ls->logger_data, "Initialization error triggers unlimited retry: %s\n", uw_error_message(ctx));
+          } else if (fk == UNLIMITED_RETRY) {
+            ls->log_debug(ls->logger_data, "[CB] Initialization error triggers unlimited retry: %s\n", uw_error_message(ctx));
+          }
           else if (fk == FATAL) {
-            ls->log_error(ls->logger_data, "Fatal initialization error: %s\n", uw_error_message(ctx));
+            ls->log_error(ls->logger_data, "[CB] Fatal initialization error: %s\n", uw_error_message(ctx));
             break;
           } else {
-            ls->log_error(ls->logger_data, "Unknown uw_begin_init return code!\n");
+            ls->log_error(ls->logger_data, "[CB] Unknown uw_begin_init return code!\n");
             break;
           }
         }
         }
 
-        char *path = NULL;
-        while(ok) {
-          jpair jp = pop();
-          jptr& j = jp.first;
+        if(ok) {
+          ls->log_debug(ls->logger_data, "[CB] Starting main loop of thread %d\n", tn);
+          char *path = NULL;
+          while(1) {
+            jpair jp = pop();
+            jptr& j = jp.first;
 
-          if(path) free(path);
-          path = strdup(jp.second.c_str());
+            if(path) free(path);
+            path = strdup(jp.second.c_str());
 
-          /* int retries_left = 50; */
-          failure_kind fk;
+            /* int retries_left = 50; */
+            failure_kind fk;
 
-          do {
-            uw_reset(ctx);
-            uw_set_deadline(ctx, uw_time + uw_time_max);
+            while(1) {
+              uw_reset(ctx);
+              uw_set_deadline(ctx, uw_time + uw_time_max);
 
-            fk = uw_begin(ctx, path);
+              fk = uw_begin(ctx, path);
 
-            if (fk == FATAL ) {
-              ls->log_error(ls->logger_data, "[CB] Fatal error: lost job #%d text '%s'\n",
-                j->key, uw_error_message(ctx));
+              if (fk == FATAL ) {
+                ls->log_error(ls->logger_data, "[CB] Fatal error: lost job #%d text '%s'\n",
+                  j->key, uw_error_message(ctx));
 
-              if (uw_rollback(ctx, 0)) {
-                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: lost job #%d\n", j->key);
-              }
-              break;
-            }
-
-            /* FIXME: BOUNDER RETRIES are treated as unlimited retries here */
-            if( fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY) {
-              ls->log_debug(ls->logger_data, "[CB] Error triggers unlimited retry: job #%d text '%s'\n",
-                j->key, uw_error_message(ctx));
-
-              if (uw_rollback(ctx, 1)) {
-                ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: lost job #%d\n", j->key);
+                if (uw_rollback(ctx, 0)) {
+                  ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: lost job #%d\n", j->key);
+                }
                 break;
               }
 
-              usleep(1000);
-              continue;
-            }
+              /* FIXME: BOUNDER RETRIES are treated as unlimited retries here */
+              if( fk == BOUNDED_RETRY || fk == UNLIMITED_RETRY) {
+                ls->log_debug(ls->logger_data, "[CB] Error triggers unlimited retry: job #%d text '%s'\n",
+                  j->key, uw_error_message(ctx));
 
-            if (fk == SUCCESS) {
-              int ret = uw_commit(ctx);
-              if(ret == 1) {
-                ls->log_error(ls->logger_data, "[CB] Commit db_commit error for job #%d\n", j->key);
+                if (uw_rollback(ctx, 1)) {
+                  ls->log_error(ls->logger_data, "[CB] Fatal error: rollback failed: lost job #%d\n", j->key);
+                  break;
+                }
+
+                usleep(1000);
                 continue;
               }
-              else if( uw_has_error(ctx)) {
-                ls->log_error(ls->logger_data, "[CB] Commit generic error for job #%d\n", j->key);
-                continue;
-              }
-              else {
-                ls->log_debug(ls->logger_data, "[CB] Commit successful for job #%d\n", j->key);
-                break;
-              }
-            }
-          } while (1);
 
-        } /* while(ok) */
+              if (fk == SUCCESS) {
+                int ret = uw_commit(ctx);
+                if(ret == 1) {
+                  ls->log_error(ls->logger_data, "[CB] Commit db_commit error for job #%d\n", j->key);
+                  continue;
+                }
+                else if( uw_has_error(ctx)) {
+                  ls->log_error(ls->logger_data, "[CB] Commit generic error for job #%d\n", j->key);
+                  continue;
+                }
+                else {
+                  ls->log_debug(ls->logger_data, "[CB] Commit successful for job #%d\n", j->key);
+                  break;
+                }
+              }
+            } /* while(1) */
+
+          } /* while(1) */
+
+        } /*if(ok) */
 
         ls->log_debug(ls->logger_data, "[CB] Exiting from worker %d\n", tn);
         uw_free(ctx);
