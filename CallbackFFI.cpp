@@ -494,28 +494,24 @@ public:
     threads.resize(nthreads);
     for (auto i=threads.begin(); i!=threads.end(); i++,tn++) {
 
-      pthread_create(&(*i),NULL,[](void *tn_) -> void* {
+      uw_loggers *ls = g.lg;
 
-        size_t tn = (size_t)tn_;
-        int ret;
-        uw_loggers *ls = g.lg;
+      ls->log_debug(ls->logger_data, "[CB] Starting new thread\n");
 
-        ls->log_debug(ls->logger_data, "[CB] Starting new thread\n");
+      uw_context* ctx = uw_init(-(int)tn, ls);
+      int ret = uw_set_app(ctx, g.app);
+      if(ret != 0) {
+        ls->log_error(ls->logger_data, "[CB] failed to set the app (ret %d)\n", ret);
+        uw_free(ctx);
+        continue;
+      }
 
-        uw_context* ctx = uw_init(-(int)tn, ls);
-        ret = uw_set_app(ctx, g.app);
-        if(ret != 0) {
-          ls->log_error(ls->logger_data, "[CB] failed to set the app (ret %d)\n", ret);
-          uw_free(ctx);
-          return NULL;
-        }
+      uw_set_headers(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
+      uw_set_env(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
 
-        uw_set_headers(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
-        uw_set_env(ctx, [](void*, const char*)->char*{return NULL;}, NULL);
+      bool ok = false;
 
-        bool ok = false;
-
-        {
+      {
         failure_kind fk;
         int retries_left = 5;
         while(1) {
@@ -543,9 +539,22 @@ public:
             break;
           }
         }
-        }
+      }
 
-        if(ok) {
+      if(ok) {
+
+        typedef std::pair<size_t, uw_context*> pack;
+        pack *p = new pack(tn,ctx);
+
+        pthread_create(&(*i),NULL,[](void *p_) -> void* {
+
+          pack* p = (pack*)p_;
+          uw_loggers *ls = g.lg;
+
+          size_t tn = p->first;
+          uw_context *ctx = p->second;
+          int ret;
+
           ls->log_debug(ls->logger_data, "[CB] Starting main loop of thread %d\n", tn);
           char *path = NULL;
           while(1) {
@@ -607,13 +616,18 @@ public:
 
           } /* while(1) */
 
-        } /*if(ok) */
 
-        ls->log_debug(ls->logger_data, "[CB] Exiting from worker %d\n", tn);
-        uw_free(ctx);
-        return NULL;
+          ls->log_debug(ls->logger_data, "[CB] Exiting from worker %d\n", tn);
+          uw_free(ctx);
+          free(p);
+          return NULL;
 
-      }, (void*)tn);
+        }, (void*)p);
+      }
+      else {
+          ls->log_debug(ls->logger_data, "[CB] Failed to create worker %d\n", tn);
+          uw_free(ctx);
+      } /*if(ok) */
     }
   }
 };
