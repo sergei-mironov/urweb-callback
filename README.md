@@ -2,42 +2,20 @@ Urweb-callback
 --------------
 
 Urweb-callback is a library for managing asynchronous processes directly from an
-[Ur/Web](http://www.impredicative.com/ur/) application.
+[Ur/Web](http://www.impredicative.com/ur/) application. Online example should be accessible
+[here](http://sthdwp.com/Demo2/main)
 
 
 Installation
 ------------
 
-Urweb-callback requires certain patches to be applied over the Ur/Web compiler.
-Follow the instructions below:
+Building requires [Nix](www.nixos.org/nix) package manager to be installed and
+[urweb-build](http://github.com/grwlf/urweb-build) instruction set available
+via NIX\_PATH variable.
 
-1. Obtain the sources and prepare the patches
-
-        $ hg clone http://hg.impredicative.com/urweb
         $ git clone https://github.com/grwlf/urweb-callback
-        $ cp -t urweb urweb-callback/*patch
-
-2. Build the Ur/Web compiler. You may try the latest Ur/Web from the official
-   repo. In case it doesn't work, please test the known-good revision (see
-   below).
-
-        $ cd urweb
-
-              # (skip this line to stay on latets Ur/Web)
-        $ hg checkout 3dd041b00087
-
-        $ ./autogen.sh
-        $ ./configure
-        $ make install
-        $ cd ..
-
-3. Build the urweb-callback
-
         $ cd urweb-callback
-        $ make
-
-Note: gcc supporting C++11 is required to compile the library.
-
+        $ nix-build build.nix
 
 The API
 -------
