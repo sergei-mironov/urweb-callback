@@ -1,22 +1,21 @@
 
-con jobrec =
-  [
-    (* Job reference which may be passed to clients *)
+con jobinfo = [
     JobRef = int
-    (* Exit code of the job process *)
   , ExitCode = option int
-    (* Command line of the job *)
   , Cmd = string
-    (* Stdout of the job (at least stdout_sz bytes) *)
-  , Stdout = blob
-  , Stderr = blob
   , ErrRep = string
   ]
 
-sequence jobrefs
+con jobrec = jobinfo ++ [
+    Stdout = blob
+  , Stderr = blob
+  , InMemory = bool
+  ]
 
-table jobs : $jobrec
+table jobs : $jobinfo
   PRIMARY KEY JobRef
+
+sequence jobrefs
 
 task initialize = fn _ =>
   CallbackFFI.initialize 4;
@@ -69,12 +68,12 @@ signature S = sig
 
   val createWithRef : jobref -> jobargs -> transaction unit
 
-  val createSync : jobargs -> transaction (record jobrec)
+  val createSync : jobargs -> transaction (record jobinfo)
 
 
   val feed : jobref -> buffer -> transaction unit
 
-  val get : jobref -> transaction (record jobrec)
+  val get : jobref -> transaction (record jobinfo)
 
   val abortMore : int -> transaction int
 
@@ -90,7 +89,7 @@ sig
 
   val stdin_sz : int
 
-  val callback : (record jobrec) -> transaction unit
+  val callback : (record jobinfo) -> transaction unit
 
 end) : S =
 
@@ -108,7 +107,7 @@ struct
 
   val mkBuffer = mkBuffer_
 
-  fun runtimeJobRec j =
+  fun runtimeJobRec j : transaction (record jobinfo) =
     e <- (let val e = CallbackFFI.exitcode j in
             if e < 0 then
               return None
@@ -119,17 +118,13 @@ struct
       JobRef=(CallbackFFI.ref j),
       ExitCode=e,
       Cmd=(CallbackFFI.cmd j),
-      Stdout=(CallbackFFI.stdout j),
-      Stderr=(CallbackFFI.stderr j),
       ErrRep=(CallbackFFI.errors j)}
 
   fun callback (jr:jobref) : transaction page =
     j <- CallbackFFI.deref jr;
     ec <- (return (CallbackFFI.exitcode j));
-    so <- (return (CallbackFFI.stdout j));
-    se <- (return (CallbackFFI.stderr j));
     er <- (return (CallbackFFI.errors j));
-    dml(UPDATE jobs SET ExitCode = {[Some ec]}, Stdout = {[so]}, Stderr = {[se]}, ErrRep = {[er]} WHERE JobRef = {[jr]});
+    dml(UPDATE jobs SET ExitCode = {[Some ec]}, ErrRep = {[er]} WHERE JobRef = {[jr]});
     mji <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
     case mji of
       |None =>
@@ -137,8 +132,8 @@ struct
         return <xml/>
       |Some ji =>
         dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND NOT {eqNullable' (SQL ExitCode) None});
-        CallbackFFI.cleanup j;
         S.callback ji.Jobs;
+        CallbackFFI.cleanup j;
         return <xml/>
 
   fun feed_ j b =
@@ -155,7 +150,7 @@ struct
     CallbackFFI.setCompletionCB j (Some (url (callback jr)));
     feed_ j ja.Stdin;
     nullb <- return (textBlob "");
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,Stdout,Stderr,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, {[nullb]}, {[nullb]}, ""));
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, ""));
     CallbackFFI.run j;
     return {}
 
@@ -174,9 +169,9 @@ struct
       CallbackFFI.pushStdin j b (blobSize b);
       CallbackFFI.pushStdinEOF j;
       CallbackFFI.executeSync j;
-      jrec <- runtimeJobRec j;
+      ji <- runtimeJobRec j;
       CallbackFFI.cleanup j;
-      return jrec
+      return ji
     end
 
   val feed jr b : transaction unit =
@@ -189,6 +184,7 @@ struct
       |Some j =>
         runtimeJobRec j
       |None =>
+        nullb <- return (textBlob "");
         r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
         return r.Jobs
 

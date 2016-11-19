@@ -1,27 +1,21 @@
 
-con jobrec = [
-    JobRef = int
-  , ExitCode = option int
-  , Cmd = string
-  , Stdout = string
-  , Stderr = string
-  , ErrRep = string
-  ]
+con jobrec = Callback.jobrec
+con jobinfo = Callback.jobinfo
 
 type job = record jobrec
 
-datatype jobstatus = Ready of job | Running of (channel job) * (source job)
+datatype jobstatus = Ready of (record jobinfo) | Running of (channel (record jobinfo)) * (source (record jobinfo))
 
-table handles : {JobRef : int, Channel : channel job}
+table handles : {JobRef : int, Channel : channel (record jobinfo)}
 
 type jobref = CallbackFFI.jobref
 
 type jobargs = Callback.jobargs_
 
 
-fun portJob (j: record Callback.jobrec): record jobrec =
-  (j -- #Stderr -- #Stdout ++
-    {Stdout = Callback.blobLines j.Stdout, Stderr = Callback.blobLines j.Stderr})
+(* fun portJob (j: record Callback.jobrec): record jobrec = *)
+(*   (j -- #Stderr -- #Stdout ++ *)
+(*     {Stdout = j.Stdout, Stderr = j.Stderr}) *)
 
 signature S = sig
 
@@ -35,7 +29,7 @@ signature S = sig
 
   val monitor : jobref -> transaction jobstatus
 
-  val monitorX : jobref -> (job -> xbody) -> transaction xbody
+  val monitorX : jobref -> (record jobinfo -> xbody) -> transaction xbody
 
   (*
    * Aborts the handler if the number of jobs exceeds the limit.
@@ -63,10 +57,10 @@ struct
     val stdout_sz = S.stdout_sz
     val stdin_sz = S.stdin_sz
 
-    val callback = fn (ji:record Callback.jobrec) =>
+    val callback = fn (ji:record jobinfo) =>
       query1 (SELECT * FROM handles WHERE handles.JobRef = {[ji.JobRef]}) (fn r s =>
         debug ("[CB] Got callback from job #" ^ (show ji.JobRef));
-        send r.Channel (portJob ji) ;
+        send r.Channel ji;
         return s) {};
       dml (DELETE FROM handles WHERE JobRef = {[ji.JobRef]});
       return {}
@@ -88,11 +82,11 @@ struct
     case r.ExitCode of
       |None =>
         c <- channel;
-        s <- source (portJob r);
+        s <- source r;
         dml (INSERT INTO handles(JobRef,Channel) VALUES ({[jr]}, {[c]}));
         return (Running (c,s))
       |Some (ec:int) =>
-        return (Ready (portJob r))
+        return (Ready r)
 
   fun monitorX jr render =
     js <- monitor jr;

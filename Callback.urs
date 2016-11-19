@@ -1,14 +1,18 @@
 
-con jobrec = [
+con jobinfo = [
     JobRef = int
   , ExitCode = option int
   , Cmd = string
-  , Stdout = blob
-  , Stderr = blob
   , ErrRep = string
   ]
 
-table jobs : $jobrec
+con jobrec = jobinfo ++ [
+    Stdout = blob
+  , Stderr = blob
+  , InMemory = bool
+  ]
+
+table jobs : $jobinfo
   PRIMARY KEY JobRef
 
 datatype eof = EOF
@@ -62,7 +66,7 @@ signature S = sig
   (*
    * Create the job and run it immideately
    *)
-  val createSync : jobargs -> transaction (record jobrec)
+  val createSync : jobargs -> transaction (record jobinfo)
 
   (*
    * Feed more input to the job's stdin. It is an error to feed more data than
@@ -73,7 +77,7 @@ signature S = sig
   (*
    * Get job's description structure
    *)
-  val get : jobref -> transaction (record jobrec)
+  val get : jobref -> transaction (record jobinfo)
 
   (*
    * Aborts the transaction if the number of jobs exceeds the limit.
@@ -100,7 +104,7 @@ sig
   val stdin_sz : int
 
   (* Callback to call upon job completion *)
-  val callback : (record jobrec) -> transaction unit
+  val callback : (record jobinfo) -> transaction unit
 
 end) : S
 

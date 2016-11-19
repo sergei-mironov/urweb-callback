@@ -797,30 +797,38 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
   enum {ok, closed, err} ret = err;
 
   {
+    /* Job is already locked by _deref */
+
     if(!get(j)->close_stdin) {
-      blob &buf_stdin = get(j)->buf_stdin;
+      try {
+        blob &buf_stdin = get(j)->buf_stdin;
 
-      size_t oldsz = buf_stdin.size() - get(j)->sz_stdin;
-      size_t newsz = oldsz + _stdin.size;
-      if(newsz <= maxsz) {
-        buf_stdin.resize(newsz);
-        memcpy(&buf_stdin[0], &buf_stdin[get(j)->sz_stdin], oldsz);
-        memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
-        get(j)->sz_stdin = 0;
+        size_t oldsz = buf_stdin.size() - get(j)->sz_stdin;
+        size_t newsz = oldsz + _stdin.size;
+        if(newsz <= maxsz) {
+          buf_stdin.resize(newsz);
+          memcpy(&buf_stdin[0], &buf_stdin[get(j)->sz_stdin], oldsz);
+          memcpy(&buf_stdin[oldsz], _stdin.data, _stdin.size);
+          get(j)->sz_stdin = 0;
 
-        if(_stdin.size > 0) {
-          if(get(j)->thread_started) {
-            int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
-            if(ret != 0)
-              dprintf("pushStdin: pthread_kill() failed with %d\n", ret);
+          if(_stdin.size > 0) {
+            if(get(j)->thread_started) {
+              int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
+              if(ret != 0)
+                dprintf("pushStdin: pthread_kill() failed with %d\n", ret);
+            }
           }
+          else {
+            dprintf("pushStdin: stdin.size == 0, doing nothing\n");
+          }
+          ret = ok;
         }
         else {
-          dprintf("pushStdin: stdin.size == 0, doing nothing\n");
+          ret = err;
         }
-        ret = ok;
       }
-      else {
+      catch(...) {
+        dprintf("pushStdin: handling C++ exception\n");
         ret = err;
       }
     }
@@ -845,6 +853,8 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 
 uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
+  /* Job is already locked by _deref */
+
   get(j)->close_stdin = true;
   if(get(j)->thread_started) {
     int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
@@ -865,6 +875,8 @@ uw_Basis_unit uw_CallbackFFI_pushArg(struct uw_context *ctx, uw_CallbackFFI_job 
 
 uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)
 {
+  /* Job is already locked by _deref */
+
   if(mburl) {
     get(j)->url_completion_cb = string(mburl);
   }
@@ -876,6 +888,8 @@ uw_Basis_unit uw_CallbackFFI_setCompletionCB(struct uw_context *ctx, uw_Callback
 
 uw_Basis_unit uw_CallbackFFI_setNotifyCB(struct uw_context *ctx, uw_CallbackFFI_job j, uw_Basis_string mburl)
 {
+  /* Job is already locked by _deref */
+
   if(mburl) {
     get(j)->url_notify_cb = string(mburl);
   }

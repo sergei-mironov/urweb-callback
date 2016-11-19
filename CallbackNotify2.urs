@@ -1,5 +1,6 @@
 (* Under development *)
 
+con jobinfo = Callback.jobinfo
 con jobrec = Callback.jobrec
 
 signature S = sig
@@ -23,6 +24,6 @@ sig
 
   val cmd : string
 
-  val render : (record jobrec) -> transaction xbody
+  val render : (record jobinfo) -> transaction xbody
 
 end) : S

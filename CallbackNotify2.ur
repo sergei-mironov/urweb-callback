@@ -1,4 +1,5 @@
 
+con jobinfo = Callback.jobinfo
 con jobrec = Callback.jobrec
 
 type job = record jobrec
@@ -31,7 +32,7 @@ sig
 
   val cmd : string
 
-  val render : (record jobrec) -> transaction xbody
+  val render : (record jobinfo) -> transaction xbody
 
 end) : S =
 
@@ -46,12 +47,12 @@ struct
     val stdout_sz = 1024
     val stdin_sz = 1024
 
-    val callback = fn (j:job) =>
-      b <- S.render j;
-      query1 (SELECT * FROM handles WHERE handles.JobRef = {[j.JobRef]}) (fn r s =>
+    val callback = fn (ji:record jobinfo) =>
+      b <- S.render ji;
+      query1 (SELECT * FROM handles WHERE handles.JobRef = {[ji.JobRef]}) (fn r s =>
         send r.Channel b;
         return s) {};
-      dml (DELETE FROM handles WHERE JobRef = {[j.JobRef]});
+      dml (DELETE FROM handles WHERE JobRef = {[ji.JobRef]});
       return {}
   end)
 
@@ -75,7 +76,7 @@ struct
       |Some (ec:int) =>
         return (Ready b)
 
-  fun monitor jr = 
+  fun monitor jr =
     js <- monitor_s jr;
     case js of
       |Ready b => return b

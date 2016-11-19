@@ -1,16 +1,10 @@
 
-con jobrec = [
-    JobRef = int
-  , ExitCode = option int
-  , Cmd = string
-  , Stdout = string
-  , Stderr = string
-  , ErrRep = string
-  ]
+con jobinfo = Callback.jobinfo
+con jobrec = Callback.jobrec
 
 type job = record jobrec
 
-datatype jobstatus = Ready of job | Running of (channel job) * (source job)
+datatype jobstatus = Ready of (record jobinfo) | Running of (channel (record jobinfo)) * (source (record jobinfo))
 
 type jobref = CallbackFFI.jobref
 
@@ -35,7 +29,7 @@ signature S = sig
    * Higher-level version of monitor. Takes 'render' function and returns the
    * XML representing job status.
    *)
-  val monitorX : jobref -> (job -> xbody) -> transaction xbody
+  val monitorX : jobref -> (record jobinfo -> xbody) -> transaction xbody
 
   (*
    * Aborts the handler if the number of jobs exceeds the limit.
