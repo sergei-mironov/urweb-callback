@@ -12,6 +12,8 @@ type jobargs = Callback.jobargs_
 
 signature S = sig
 
+  type jobref = CallbackFFI.jobref
+
   val nextJobRef : transaction jobref
 
   val create : jobargs -> transaction jobref

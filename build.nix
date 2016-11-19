@@ -17,36 +17,38 @@ rec {
 
     statements = [
       (sys "list")
+      (sys "option")
       (ffi ./CallbackFFI.urs)
       (include ./CallbackFFI.h)
       (obj-cpp-11 ./CallbackFFI.cpp)
       (set "safeGet Callback/Default/callback")
       (set "safeGet CallbackNotify/Default/C/callback")
-      (src ./Callback.ur ./Callback.urs)
-      (src ./CallbackNotify.ur ./CallbackNotify.urs)
-      (src ./CallbackNotify2.ur ./CallbackNotify2.urs)
+      (src1 ./Callback.ur)
+      # (src ./CallbackNotify.ur ./CallbackNotify.urs)
+      # (src ./CallbackNotify2.ur ./CallbackNotify2.urs)
+      (src1 ./CallbackNotify3.ur)
     ];
   };
 
-  callback-demo =
-    mkExe {
-      name = "CallbackDemo";
-      dbms = "sqlite";
+  # callback-demo =
+  #   mkExe {
+  #     name = "CallbackDemo";
+  #     dbms = "sqlite";
 
-      libraries = {
-        inherit callback;
-      };
+  #     libraries = {
+  #       inherit callback;
+  #     };
 
-      statements = [
-        (rule "safeGet Demo2/main")
-        (rule "safeGet Demo2/monitor")
-        (rule "allow env PING")
-        (sys "list")
-        (sys "char")
-        (sys "string")
-        (src ./demo/Demo2.ur ./demo/Demo2.urs)
-      ];
-    };
+  #     statements = [
+  #       (rule "safeGet Demo2/main")
+  #       (rule "safeGet Demo2/monitor")
+  #       (rule "allow env PING")
+  #       (sys "list")
+  #       (sys "char")
+  #       (sys "string")
+  #       (src ./demo/Demo2.ur ./demo/Demo2.urs)
+  #     ];
+  #   };
 
   mktest = name : file : (mkExe {
       name = name;
@@ -72,9 +74,9 @@ rec {
     });
 
   tests = [
-    (mktest "Simple1" ./test2/Simple1.ur)
-    (mktest "Stdout" ./test2/Stdout.ur)
-    (mktest "Stress" ./test2/Stress.ur)
+    # (mktest "Simple1" ./test2/Simple1.ur)
+    # (mktest "Stdout" ./test2/Stdout.ur)
+    # (mktest "Stress" ./test2/Stress.ur)
     (mktest "Notify" ./test2/Notify.ur)
   ];
 

@@ -6,14 +6,7 @@ con jobinfo = [
   , ErrRep = string
   ]
 
-con jobrec = jobinfo ++ [
-    Stdout = blob
-  , Stderr = blob
-  , InMemory = bool
-  ]
-
-table jobs : $jobinfo
-  PRIMARY KEY JobRef
+con jobrec t = jobinfo ++ [Payload = t]
 
 sequence jobrefs
 
@@ -50,7 +43,26 @@ fun shellCommand_ s =
 fun absCommand_ cmd args =
   {Cmd = cmd, Stdin = Chunk (textBlob "", Some EOF), Args = args}
 
-signature S = sig
+
+functor Make(S : sig
+
+  type t
+
+  val ti1 : sql_injectable t
+
+  val tdef : t
+
+  val gc_depth : int
+
+  val stdout_sz : int
+
+  val stdin_sz : int
+
+  val callback : (record (jobrec t)) -> transaction unit
+
+end) : sig
+
+  val jobs : sql_table (jobrec S.t) [Pkey=[JobRef]]
 
   type jobref = CallbackFFI.jobref
 
@@ -68,32 +80,23 @@ signature S = sig
 
   val createWithRef : jobref -> jobargs -> transaction unit
 
-  val createSync : jobargs -> transaction (record jobinfo)
-
+  val createSync : jobargs -> transaction jobref
 
   val feed : jobref -> buffer -> transaction unit
-
-  val get : jobref -> transaction (record jobinfo)
 
   val abortMore : int -> transaction int
 
 end
 
-
-functor Make(S :
-sig
-
-  val gc_depth : int
-
-  val stdout_sz : int
-
-  val stdin_sz : int
-
-  val callback : (record jobinfo) -> transaction unit
-
-end) : S =
+ =
 
 struct
+
+  type t = S.t
+  val ti1 = S.ti1
+
+  table jobs : (jobrec S.t)
+    PRIMARY KEY JobRef
 
   type jobref = CallbackFFI.jobref
 
@@ -131,8 +134,8 @@ struct
         CallbackFFI.forceBoundedRetry ("Force bounded retry for job #" ^ (show jr));
         return <xml/>
       |Some ji =>
-        dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND NOT {eqNullable' (SQL ExitCode) None});
         S.callback ji.Jobs;
+        dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND NOT {eqNullable' (SQL ExitCode) None});
         CallbackFFI.cleanup j;
         return <xml/>
 
@@ -145,12 +148,14 @@ struct
         CallbackFFI.pushStdin j b S.stdin_sz
 
   fun createWithRef (jr:jobref) (ja:jobargs) : transaction unit =
+    debug ("BUFSZ:"^(show S.stdout_sz));
     j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
     mapM_ (CallbackFFI.pushArg j) ja.Args;
     CallbackFFI.setCompletionCB j (Some (url (callback jr)));
     feed_ j ja.Stdin;
     nullb <- return (textBlob "");
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, ""));
+    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,ErrRep,Payload)
+        VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, "", {[S.tdef]}));
     CallbackFFI.run j;
     return {}
 
@@ -169,24 +174,22 @@ struct
       CallbackFFI.pushStdin j b (blobSize b);
       CallbackFFI.pushStdinEOF j;
       CallbackFFI.executeSync j;
-      ji <- runtimeJobRec j;
       CallbackFFI.cleanup j;
-      return ji
+      return jr
     end
 
   val feed jr b : transaction unit =
     j <- CallbackFFI.deref jr;
     feed_ j b
 
-  fun get jr =
-    mj <- CallbackFFI.tryDeref jr;
-    case mj of
-      |Some j =>
-        runtimeJobRec j
-      |None =>
-        nullb <- return (textBlob "");
-        r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
-        return r.Jobs
+  (* fun get jr = *)
+  (*   mj <- CallbackFFI.tryDeref jr; *)
+  (*   case mj of *)
+  (*     |Some j => *)
+  (*       runtimeJobRec j *)
+  (*     |None => *)
+  (*       r <- oneRow (SELECT * FROM jobs AS J WHERE J.JobRef = {[jr]}); *)
+  (*       return r.J *)
 
   fun abortMore l =
     CallbackFFI.limitActive l;
@@ -197,6 +200,8 @@ end
 
 structure Default = Make(
   struct
+    type t = int
+    val tdef = 0
     val gc_depth = 1000
     val stdout_sz = 10*1024
     val stdin_sz = 10*1024

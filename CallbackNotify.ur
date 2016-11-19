@@ -13,13 +13,11 @@ type jobref = CallbackFFI.jobref
 type jobargs = Callback.jobargs_
 
 
-(* fun portJob (j: record Callback.jobrec): record jobrec = *)
-(*   (j -- #Stderr -- #Stdout ++ *)
-(*     {Stdout = j.Stdout, Stderr = j.Stderr}) *)
-
 signature S = sig
 
   val nextJobRef : transaction jobref
+
+  type jobref = CallbackFFI.jobref
 
   val create : jobargs -> transaction jobref
 
@@ -59,13 +57,14 @@ struct
 
     val callback = fn (ji:record jobinfo) =>
       query1 (SELECT * FROM handles WHERE handles.JobRef = {[ji.JobRef]}) (fn r s =>
-        debug ("[CB] Got callback from job #" ^ (show ji.JobRef));
         send r.Channel ji;
         return s) {};
       dml (DELETE FROM handles WHERE JobRef = {[ji.JobRef]});
       return {}
 
   end)
+
+  type jobref = CallbackFFI.jobref
 
   val nextJobRef = C.nextJobRef
 
@@ -104,4 +103,5 @@ structure Default = Make(
     val gc_depth = 1000
     val stdout_sz = 10*1024
     val stdin_sz = 10*1024
+    val callback = (fn _ => return {})
   end)

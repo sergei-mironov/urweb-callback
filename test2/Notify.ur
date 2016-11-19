@@ -8,8 +8,6 @@ fun search (path:string) : transaction xbody =
     case j.ExitCode of
       |Some _ => <xml>
           <p>Result:{[j.ExitCode]}</p>
-          <p>Stdout:<pre>{[j.Stdout]}</pre></p>
-          <p>Stderr:<pre>{[j.Stderr]}</pre></p>
         </xml>
       |None => <xml>Searching...</xml>)
 

@@ -82,8 +82,10 @@ struct job {
     int& get() { return cnt; }
   };
 
-  job(jkey _key, const string &_cmd, int _bufsize) :
-		  key(_key), cmd(_cmd) {
+  job(jkey _key, const string &_cmd, size_t _bufsize) :
+		  key(_key), cmd(_cmd)
+  {
+    dprintf("Resizing buffers\n");
     buf_stdout.resize(_bufsize);
     buf_stderr.resize(_bufsize);
     sz_stdout = 0;
@@ -97,7 +99,7 @@ struct job {
 
     atomic_counter c;
     c.get()++;
-    dprintf("Hello job #%ld (cnt %d)\n", key, c.get());
+    dprintf("Hello job #%ld cnt %d cmd %s buf %lu\n", key, c.get(), cmd.c_str(), _bufsize);
   }
 
   ~job() {
@@ -366,8 +368,12 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
         if (FD_ISSET( cmd_to_ur2[0], &rfds )) {
           ret--;
-          read_job(cmd_to_ur2[0], r, &job::buf_stderr, &job::sz_stderr, true);
-          /* ignore return value compeletely */
+          ssize_t ret = read_job(cmd_to_ur2[0], r, &job::buf_stderr, &job::sz_stderr, true);
+          if(ret < 0)
+            continue;
+          else if (ret == 0) {
+            UW_SYSTEM_PIPE_CLOSE_OUT(cmd_to_ur2);
+          }
         }
 
         if (FD_ISSET( cmd_to_ur[0], &rfds )) {
@@ -377,8 +383,13 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
             continue;
           else if (ret == 0) {
             UW_SYSTEM_PIPE_CLOSE_OUT(cmd_to_ur);
-            break;
           }
+        }
+
+        if(cmd_to_ur[0+2] == 0 && cmd_to_ur2[0+2] == 0) {
+          dprintf("Job #%ld, exiting due to both pipes closed, total read %lu/%lu bytes from stdout, %lu/%lu bytes from stderr\n",
+              r->key, r->sz_stdout, r->buf_stdout.size(), r->sz_stderr, r->buf_stderr.size());
+          break;
         }
 
         if (FD_ISSET( ur_to_cmd[1], &wfds )) {
@@ -403,6 +414,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
           r->sz_stdin += written;
 
           if ((r->sz_stdin == r->buf_stdin.size()) && r->close_stdin) {
+            dprintf("Job #%ld, no more writes, closing stdin\n", r->key);
             UW_SYSTEM_PIPE_CLOSE_IN(ur_to_cmd);
           }
         }
@@ -732,7 +744,7 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   uw_Basis_int stdout_sz,
   uw_Basis_int jr)
 {
-  jptr* pp;
+  jptr* pp = NULL;
 
   int limit = (long int)uw_get_global(ctx, UWCB_LIMIT);
   if(limit > 0) {
@@ -745,10 +757,14 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
     }
   }
 
-  {
-    pp = new jptr(new job(jr, cmd, stdout_sz));
+  if(stdout_sz < 0) {
+    uw_error(ctx, FATAL, "Job buffer size < 0 (%lld)\n", stdout_sz);
+  }
+
+  try {
+    pp = new jptr(new job(jr, cmd, (size_t)stdout_sz));
     get(pp)->m.lock();
-    dprintf("Job #%ld create lock (cmd %s)\n", get(pp)->key, cmd);
+    dprintf("Job #%ld create lock (cmd %s) bufsize %lld\n", get(pp)->key, cmd, stdout_sz);
 
     jobset s;
     if(! s.insert(get(pp))) {
@@ -756,9 +772,15 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
       pp = NULL;
     }
   }
+  catch(...) {
+    if(pp) {
+      delete ((jptr*)pp);
+      pp = NULL;
+    }
+  }
 
   if(pp == NULL)
-    uw_error(ctx, FATAL, "Failed to create a job %s using jey #%d\n", cmd, jr);
+    uw_error(ctx, FATAL, "Failed to create a job %s using jr #%d\n", cmd, jr);
 
   uw_register_transactional(ctx, pp, NULL, NULL,
     [](void* pp, int) {
