@@ -1,205 +1,43 @@
 
+type jobref = CallbackFFI.jobref
+
 con jobinfo = [
-    JobRef = int
+    Id = int
   , ExitCode = option int
   , Cmd = string
-  , ErrRep = string
+  , Hint = string
   ]
 
-con jobrec = jobinfo ++ [
-    Stdout = blob
-  , Stderr = blob
-  , InMemory = bool
-  ]
+functor Make(M : sig
 
-table jobs : $jobinfo
-  PRIMARY KEY JobRef
+  con u
 
-sequence jobrefs
+  constraint [Id,ExitCode,Cmd,Hint] ~ u
 
-task initialize = fn _ =>
-  CallbackFFI.initialize 4;
-  return {}
+  table t : (jobinfo ++ u)
 
-fun mapM_ a b = i <- List.mapM a b; return {}
+  sequence s
 
-datatype eof = EOF
+end) = struct
 
-datatype buffer = Chunk of blob * (option eof)
+  open CallbackFFI
 
-fun mkBuffer_ s = Chunk (textBlob s, Some EOF)
+  type row' = record (jobinfo ++ M.u)
 
-type jobargs_ = {
-    Cmd : string
-  , Stdin : buffer
-  , Args : list string
-  }
+  (* fun ensql [avail ::_] (r : row') : $(map (sql_exp avail [] []) fs') = *)
+  (*     @map2 [meta] [fst] [fn ts :: (Type * Type) => sql_exp avail [] [] ts.1] *)
+  (*      (fn [ts] meta v => @sql_inject meta.Inj v) *)
+  (*      M.folder M.cols r *)
 
-val lastLines = CallbackFFI.lastLines
+  fun createSync (ji : record jobinfo, args : record M.u) : transaction (option int) =
+    i <- nextval M.s;
+    dml(insert M.t ({Id = sql_inject ji.Id,
+          ExitCode = sql_inject ji.ExitCode,
+          Cmd = sql_inject ji.Cmd,
+          Hint = sql_inject ji.Hint} ++ args));
 
-val blobLines = CallbackFFI.blobLines
-
-fun checkString (f:string -> bool) (s:string) : transaction string =
-  return (case f s of
-    |False => error <xml>checkString failed on {[s]}</xml>
-    |True => s)
-
-fun shellCommand_ s =
-  {Cmd = "/bin/sh", Stdin = Chunk (textBlob "", Some EOF), Args = "-c" :: s :: [] }
-
-fun absCommand_ cmd args =
-  {Cmd = cmd, Stdin = Chunk (textBlob "", Some EOF), Args = args}
-
-signature S = sig
-
-  type jobref = CallbackFFI.jobref
-
-  type jobargs = jobargs_
-
-  val nextJobRef : transaction jobref
-
-  val shellCommand : string -> jobargs
-
-  val absCommand : string -> (list string) -> jobargs
-
-  val mkBuffer : string -> buffer
-
-  val create : jobargs -> transaction jobref
-
-  val createWithRef : jobref -> jobargs -> transaction unit
-
-  val createSync : jobargs -> transaction (record jobinfo)
-
-
-  val feed : jobref -> buffer -> transaction unit
-
-  val get : jobref -> transaction (record jobinfo)
-
-  val abortMore : int -> transaction int
+    return (Some i)
 
 end
 
-
-functor Make(S :
-sig
-
-  val gc_depth : int
-
-  val stdout_sz : int
-
-  val stdin_sz : int
-
-  val callback : (record jobinfo) -> transaction unit
-
-end) : S =
-
-struct
-
-  type jobref = CallbackFFI.jobref
-
-  type jobargs = jobargs_
-
-  val nextJobRef = nextval jobrefs
-
-  val shellCommand = shellCommand_
-
-  val absCommand = absCommand_
-
-  val mkBuffer = mkBuffer_
-
-  fun runtimeJobRec j : transaction (record jobinfo) =
-    e <- (let val e = CallbackFFI.exitcode j in
-            if e < 0 then
-              return None
-            else
-              return (Some e)
-          end);
-    return {
-      JobRef=(CallbackFFI.ref j),
-      ExitCode=e,
-      Cmd=(CallbackFFI.cmd j),
-      ErrRep=(CallbackFFI.errors j)}
-
-  fun callback (jr:jobref) : transaction page =
-    j <- CallbackFFI.deref jr;
-    ec <- (return (CallbackFFI.exitcode j));
-    er <- (return (CallbackFFI.errors j));
-    dml(UPDATE jobs SET ExitCode = {[Some ec]}, ErrRep = {[er]} WHERE JobRef = {[jr]});
-    mji <- oneOrNoRows (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
-    case mji of
-      |None =>
-        CallbackFFI.forceBoundedRetry ("Force bounded retry for job #" ^ (show jr));
-        return <xml/>
-      |Some ji =>
-        dml (DELETE FROM jobs WHERE JobRef < {[jr-S.gc_depth]} AND NOT {eqNullable' (SQL ExitCode) None});
-        S.callback ji.Jobs;
-        CallbackFFI.cleanup j;
-        return <xml/>
-
-  fun feed_ j b =
-    case b of
-     |Chunk (b,Some EOF) =>
-        CallbackFFI.pushStdin j b S.stdin_sz;
-        CallbackFFI.pushStdinEOF j
-     |Chunk (b,None) =>
-        CallbackFFI.pushStdin j b S.stdin_sz
-
-  fun createWithRef (jr:jobref) (ja:jobargs) : transaction unit =
-    j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
-    mapM_ (CallbackFFI.pushArg j) ja.Args;
-    CallbackFFI.setCompletionCB j (Some (url (callback jr)));
-    feed_ j ja.Stdin;
-    nullb <- return (textBlob "");
-    dml(INSERT INTO jobs(JobRef,ExitCode,Cmd,ErrRep) VALUES ({[jr]}, {[None]}, {[CallbackFFI.cmd j]}, ""));
-    CallbackFFI.run j;
-    return {}
-
-  fun create (ja:jobargs) : transaction jobref =
-    jr <- nextJobRef;
-    createWithRef jr ja;
-    return jr
-
-  fun createSync ja =
-    let
-      val Chunk (b,_) = ja.Stdin
-    in
-      jr <- nextJobRef;
-      j <- CallbackFFI.create ja.Cmd S.stdout_sz jr;
-      mapM_ (CallbackFFI.pushArg j) ja.Args;
-      CallbackFFI.pushStdin j b (blobSize b);
-      CallbackFFI.pushStdinEOF j;
-      CallbackFFI.executeSync j;
-      ji <- runtimeJobRec j;
-      CallbackFFI.cleanup j;
-      return ji
-    end
-
-  val feed jr b : transaction unit =
-    j <- CallbackFFI.deref jr;
-    feed_ j b
-
-  fun get jr =
-    mj <- CallbackFFI.tryDeref jr;
-    case mj of
-      |Some j =>
-        runtimeJobRec j
-      |None =>
-        nullb <- return (textBlob "");
-        r <- oneRow (SELECT * FROM jobs WHERE jobs.JobRef = {[jr]});
-        return r.Jobs
-
-  fun abortMore l =
-    CallbackFFI.limitActive l;
-    n <- CallbackFFI.nactive;
-    return n
-
-end
-
-structure Default = Make(
-  struct
-    val gc_depth = 1000
-    val stdout_sz = 10*1024
-    val stdin_sz = 10*1024
-    val callback = fn _ => return {}
-  end)
 
