@@ -545,6 +545,7 @@ public:
           fk = uw_begin_init(ctx);
           if (fk == SUCCESS) {
             ls->log_debug(ls->logger_data, "[CB] Database connection initialized.\n");
+            ls->log_debug(ls->logger_data, "[CB] Set UWCB_DEBUG to enable debug messages.\n");
             ok = true;
             break;
           } else if (fk == BOUNDED_RETRY) {
