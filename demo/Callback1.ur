@@ -8,10 +8,11 @@ structure C = Callback.Make(
     con u = [Payload = int]
     val t = jobtable
     val s = jobtable_seq
+
+    fun completion (ji : record Callback.jobinfo) =
+      return {}
   end
 )
-
-(* open Callback *)
 
 
 fun template (mb:transaction xbody) : transaction page =
@@ -26,7 +27,7 @@ fun template (mb:transaction xbody) : transaction page =
 fun main {} : transaction page = template (
   (* dml(INSERT INTO jobtable(Id,ExitCode,Cmd,Hint,Payload,Zzz) *)
   (*     VALUES(0,NULL,"","",0,0)); *)
-  xx <- C.createSync "aaaa" {Payload=33} ;
+  (* xx <- C.createSync "aaaa" {Payload=33} ; *)
   return <xml>
     <p>Callback template</p>
   </xml>)

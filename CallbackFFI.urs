@@ -4,11 +4,11 @@ type jobref = Basis.int
 
 val initialize : int -> transaction unit
 
-val create : string -> int -> jobref -> transaction job
+val create : string -> bool -> int -> int -> jobref -> transaction job
 
 val setCompletionCB : job -> option url -> transaction unit
 val setNotifyCB : job -> option url -> transaction unit
-val pushStdin : job -> blob -> int -> transaction unit
+val pushStdin : job -> blob -> transaction unit
 val pushStdinEOF : job -> transaction unit
 val pushArg : job -> string -> transaction unit
 val run: job -> transaction unit
