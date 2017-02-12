@@ -31,6 +31,8 @@ functor Make(M : sig
 
   con u
 
+  val injs : record (map sql_injectable u)
+
   val fu : folder u
 
   constraint [Id,ExitCode,Cmd,Hint] ~ u
