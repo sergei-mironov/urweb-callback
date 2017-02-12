@@ -12,6 +12,10 @@ functor Make(M : sig
 
   con u
 
+  val fu : folder u
+
+  (* val injs : record (map sql_injectable u) *)
+
   constraint [Id,ExitCode,Cmd,Hint] ~ u
 
   table t : (jobinfo ++ u)
@@ -22,19 +26,24 @@ end) = struct
 
   open CallbackFFI
 
-  type row' = record (jobinfo ++ M.u)
+  fun createSync (cmd : string)
+                 (injs : record (map sql_injectable M.u))
+                 (fs : record M.u)
+                 : transaction (option int) =
 
-  (* fun ensql [avail ::_] (r : row') : $(map (sql_exp avail [] []) fs') = *)
-  (*     @map2 [meta] [fst] [fn ts :: (Type * Type) => sql_exp avail [] [] ts.1] *)
-  (*      (fn [ts] meta v => @sql_inject meta.Inj v) *)
-  (*      M.folder M.cols r *)
-
-  fun createSync (ji : record jobinfo, args : record M.u) : transaction (option int) =
     i <- nextval M.s;
-    dml(insert M.t ({Id = sql_inject ji.Id,
-          ExitCode = sql_inject ji.ExitCode,
-          Cmd = sql_inject ji.Cmd,
-          Hint = sql_inject ji.Hint} ++ args));
+
+    dml (insert M.t (
+
+        { Id = sql_inject i,
+          ExitCode = sql_inject None,
+          Cmd = sql_inject cmd,
+          Hint = sql_inject "" } ++
+
+        (@Top.map2 [sql_injectable] [ident] [sql_exp [] [] []]
+          (fn [t] => @sql_inject) M.fu injs fs)
+      )
+    );
 
     return (Some i)
 

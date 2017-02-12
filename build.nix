@@ -36,8 +36,7 @@ rec {
       };
 
       statements = [
-        (rule "safeGet Demo2/main")
-        (rule "safeGet Demo2/monitor")
+        (rule "safeGet Callback1/main")
         (rule "allow env PING")
         (sys "list")
         (sys "char")
