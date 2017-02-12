@@ -545,7 +545,6 @@ public:
           fk = uw_begin_init(ctx);
           if (fk == SUCCESS) {
             ls->log_debug(ls->logger_data, "[CB] Database connection initialized.\n");
-            ls->log_debug(ls->logger_data, "[CB] Set UWCB_DEBUG to enable debug messages.\n");
             ok = true;
             break;
           } else if (fk == BOUNDED_RETRY) {
@@ -731,6 +730,9 @@ uw_Basis_unit uw_CallbackFFI_initialize(
   struct uw_context *ctx,
   uw_Basis_int nthread)
 {
+  uw_loggers *ls = uw_get_loggers(ctx);
+  ls->log_debug(ls->logger_data, "[CB] Set UWCB_DEBUG to enable debug messages.\n");
+
   if((notifiers::started++) == 0) {
     notifiers::init(ctx,nthread);
   }

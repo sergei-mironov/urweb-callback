@@ -1,11 +1,11 @@
-table jobtable : (Callback.jobinfo ++ [Payload=int])
+table jobtable : (Callback.jobinfo)
   PRIMARY KEY Id
 
 sequence jobtable_seq
 
 structure C = Callback.Make(
   struct
-    con u = [Payload = int]
+    con u = []
     val t = jobtable
     val s = jobtable_seq
 
@@ -25,10 +25,11 @@ fun template (mb:transaction xbody) : transaction page =
 
 
 fun main {} : transaction page = template (
-  (* dml(INSERT INTO jobtable(Id,ExitCode,Cmd,Hint,Payload,Zzz) *)
-  (*     VALUES(0,NULL,"","",0,0)); *)
-  (* xx <- C.createSync "aaaa" {Payload=33} ; *)
+  j <- C.create( C.shellCommand "sleep 4; echo DONE;" ++ C.defaultIO ) {};
+  x <- C.monitorX C.defaultRender j;
+
   return <xml>
     <p>Callback template</p>
+    {x}
   </xml>)
 

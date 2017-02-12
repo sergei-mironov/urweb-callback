@@ -37,6 +37,7 @@ rec {
 
       statements = [
         (rule "safeGet Callback1/main")
+        (rule "safeGet Callback1/C/callback")
         (rule "allow env PING")
         (sys "list")
         (sys "char")

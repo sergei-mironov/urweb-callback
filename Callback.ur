@@ -1,5 +1,7 @@
 
-type jobref = CallbackFFI.jobref
+structure FFI = CallbackFFI
+
+type jobref = FFI.jobref
 
 con jobinfo = [
     Id = int
@@ -21,6 +23,10 @@ con jobargs = [
   , Stdout_wrap = bool
   ]
 
+task initialize = fn _ =>
+  FFI.initialize 4;
+  return {}
+
 functor Make(M : sig
 
   con u
@@ -37,23 +43,49 @@ functor Make(M : sig
 
 end) = struct
 
-  structure FFI = CallbackFFI
 
-  fun shellCommand (s:string) : jobargs =
-    { Cmd = "/bin/sh"
+  datatype jobstatus
+    = Ready of record jobinfo
+    | Running of (channel (record jobinfo)) * (source (record jobinfo))
+
+  table handles : {Id : int, Channel : channel (record jobinfo)}
+
+  task initialize = fn _ =>
+    dml(DELETE FROM handles WHERE Id > 0);
+    return {}
+
+  fun shellCommand (s:string) = {
+      Cmd = "/bin/sh"
     , Args = "-c" :: s :: []
+    }
+
+  val defaultIO = {
+      Stdin = Chunk (textBlob "",True)
+    , Stdin_sz = 0
+    , Stdout_sz = 1024
+    , Stdout_wrap = True
     }
 
   fun callback (jid:int) : transaction page =
     j <- FFI.deref jid;
     ec <- return (FFI.exitcode j);
     er <- return (FFI.errors j);
+    cmd <- return (FFI.cmd j);
     dml(UPDATE {{M.t}} SET ExitCode={[Some ec]},Hint={[er]} WHERE Id={[jid]});
-    M.completion {
+    ji <- return {
         Id = jid
       , ExitCode = Some (FFI.exitcode j)
-      , Cmd = FFI.cmd j
+      , Cmd = cmd
       , Hint = er};
+
+    query1 (SELECT * FROM handles WHERE handles.Id = {[jid]}) (fn r s =>
+      send r.Channel ji ;
+      return s) {};
+
+    dml (DELETE FROM handles WHERE Id = {[jid]});
+
+    M.completion ji;
+
     return <xml/>
 
   fun create
@@ -90,28 +122,27 @@ end) = struct
     return j
 
 
-  datatype jobstatus
-    = Ready of jobinfo
-    | Running of (channel jobinfo) * (source jobinfo)
-
-  table handles : {Id : int, Channel : channel jobinfo}
-
   fun monitor (j : FFI.job) =
-
-    jid <- return FFI.ref j;
-    case FFI.exitcode j of
-      |None =>
+    jid <- return (FFI.ref j);
+    ec <- return (FFI.exitcode j);
+    case ec >= 0 of
+      |False =>
         c <- channel;
         s <- source ({Id = jid, Cmd = FFI.cmd j,
                       ExitCode = None, Hint = FFI.errors j});
-        dml (INSERT INTO handles(JobRef,Channel) VALUES ({[jid]}, {[c]}));
+        dml (INSERT INTO handles(Id,Channel) VALUES ({[jid]}, {[c]}));
         return (Running (c,s))
 
-      |Some (ec:int) =>
+      |True =>
         return (Ready {Id = jid, Cmd = FFI.cmd j,
                       ExitCode = Some ec, Hint = FFI.errors j})
 
-  fun monitorX (j : FFI.job) render =
+  fun defaultRender (ji : record jobinfo) : xbody =
+    <xml>
+      ID {[ji.Id]} Cmd {[ji.Cmd]} ExitCode {[ji.ExitCode]} Hint {[ji.Hint]}
+    </xml>
+
+  fun monitorX (render : record jobinfo -> xbody) (j : FFI.job) : transaction xbody =
     js <- monitor j;
     case js of
       |Ready j => return (render j)
