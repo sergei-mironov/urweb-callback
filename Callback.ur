@@ -39,6 +39,11 @@ end) = struct
 
   structure FFI = CallbackFFI
 
+  fun shellCommand (s:string) : jobargs =
+    { Cmd = "/bin/sh"
+    , Args = "-c" :: s :: []
+    }
+
   fun callback (jid:int) : transaction page =
     j <- FFI.deref jid;
     ec <- return (FFI.exitcode j);
@@ -82,8 +87,39 @@ end) = struct
           (fn [t] => @sql_inject) M.fu injs fs)
       )
     );
-
     return j
+
+
+  datatype jobstatus
+    = Ready of jobinfo
+    | Running of (channel jobinfo) * (source jobinfo)
+
+  table handles : {Id : int, Channel : channel jobinfo}
+
+  fun monitor (j : FFI.job) =
+
+    jid <- return FFI.ref j;
+    case FFI.exitcode j of
+      |None =>
+        c <- channel;
+        s <- source ({Id = jid, Cmd = FFI.cmd j,
+                      ExitCode = None, Hint = FFI.errors j});
+        dml (INSERT INTO handles(JobRef,Channel) VALUES ({[jid]}, {[c]}));
+        return (Running (c,s))
+
+      |Some (ec:int) =>
+        return (Ready {Id = jid, Cmd = FFI.cmd j,
+                      ExitCode = Some ec, Hint = FFI.errors j})
+
+  fun monitorX (j : FFI.job) render =
+    js <- monitor j;
+    case js of
+      |Ready j => return (render j)
+      |Running (c,ss) =>
+        return <xml>
+          <dyn signal={v <- signal ss; return (render v)}/>
+          <active code={spawn (v <- recv c; set ss v); return <xml/>}/>
+          </xml>
 
 end
 
