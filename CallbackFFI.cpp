@@ -96,6 +96,7 @@ struct job {
     cmd_and_args = cmd;
     stdin_max_sz = _stdin_sz;
     wrap_stdout = _wrap_stdout;
+    terminate_request = false;
 
     atomic_counter c;
     c.get()++;
@@ -142,6 +143,8 @@ struct job {
   bool wrap_stdout; // set if stdout wrapping should be allowed
 
   std::vector<string> args;
+
+  bool terminate_request;
 
   // Infrastructure errors (not stderr). Needs mutex.
   oss err;
@@ -359,6 +362,13 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
         tv.tv_nsec = 0;
 
         int ret = pselect(max_fd+1, &rfds, &wfds, &efds, &tv, pss);
+
+        {
+          jlock _(r);
+          if(r->terminate_request) {
+            r->throw_c([=](oss& e) { e << "terminate request" ; });
+          }
+        }
 
         if (ret < 0) {
           if(errno == EINTR) {
@@ -800,6 +810,17 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
 
   return pp;
 }
+
+uw_Basis_unit uw_CallbackFFI_terminate(struct uw_context *ctx,
+    uw_CallbackFFI_job j)
+{
+  get(j)->terminate_request = true;
+  int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
+  if(ret != 0)
+    dprintf("terminate: pthread_kill() failed with %d\n", ret);
+  return 0;
+}
+
 
 uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
     uw_CallbackFFI_job j,

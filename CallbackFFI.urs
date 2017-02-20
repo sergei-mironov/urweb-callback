@@ -13,6 +13,7 @@ val pushStdinEOF : job -> transaction unit
 val pushArg : job -> string -> transaction unit
 val run: job -> transaction unit
 val cleanup: job -> transaction unit
+val terminate : job -> transaction unit
 
 val nactive : transaction int
 val limitActive : int -> transaction unit
