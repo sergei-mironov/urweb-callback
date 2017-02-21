@@ -14,6 +14,9 @@ structure C = Callback.Make(
   end
 )
 
+fun terminate (jid:int) : transaction {} =
+  j <- CallbackFFI.deref jid;
+  CallbackFFI.terminate j
 
 fun template (mb:transaction xbody) : transaction page =
   b <- mb;
@@ -23,13 +26,14 @@ fun template (mb:transaction xbody) : transaction page =
       <body>{b}</body>
     </xml>
 
-
 fun main {} : transaction page = template (
-  j <- C.create( C.shellCommand "sleep 4; echo DONE;" ++ C.defaultIO ) {};
+  j <- C.create( C.shellCommand "sleep 5; echo DONE;" ++ C.defaultIO ) {};
   x <- C.monitorX C.defaultRender j;
-
+  jid <- CallbackFFI.refM j;
   return <xml>
     <p>Callback template</p>
+    <button onclick={fn _ => rpc(terminate jid)} >Terminate</button>
     {x}
-  </xml>)
+  </xml>
+  )
 

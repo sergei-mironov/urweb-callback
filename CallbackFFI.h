@@ -47,6 +47,7 @@ uw_Basis_int uw_CallbackFFI_nactive(struct uw_context *ctx);
 uw_CallbackFFI_job uw_CallbackFFI_deref(struct uw_context *ctx, uw_CallbackFFI_jobref jr);
 uw_CallbackFFI_job* uw_CallbackFFI_tryDeref(struct uw_context *ctx, uw_CallbackFFI_jobref jr);
 uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_job j);
+uw_CallbackFFI_jobref uw_CallbackFFI_refM(struct uw_context *ctx, uw_CallbackFFI_job j);
 
 uw_Basis_int uw_CallbackFFI_pid(struct uw_context *ctx, uw_CallbackFFI_job j);
 uw_Basis_int uw_CallbackFFI_exitcode(struct uw_context *ctx, uw_CallbackFFI_job j);

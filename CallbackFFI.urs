@@ -21,6 +21,7 @@ val limitActive : int -> transaction unit
 val tryDeref : jobref -> transaction (option job)
 val deref : jobref -> transaction job
 val ref : job -> jobref
+val refM : job -> transaction jobref
 
 val pid : job -> int
 val exitcode : job -> int

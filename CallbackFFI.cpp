@@ -332,7 +332,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       UW_SYSTEM_PIPE_CLOSE_IN ( cmd_to_ur2 );
       UW_SYSTEM_PIPE_CLOSE_OUT( ur_to_cmd );
 
-      while (1){
+      while (1) {
         fd_set rfds, wfds, efds;
 
         int max_fd = 0;
@@ -350,6 +350,10 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
         {
           jlock _(r);
+          if(r->terminate_request) {
+            r->throw_c([=](oss& e) { e << "terminate request" ; });
+          }
+
           if(r->buf_stdin.size() > r->sz_stdin) {
             if (ur_to_cmd[1+2] != 0) {
               MY_FD_SET_546( ur_to_cmd[1], &wfds );
@@ -362,13 +366,6 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
         tv.tv_nsec = 0;
 
         int ret = pselect(max_fd+1, &rfds, &wfds, &efds, &tv, pss);
-
-        {
-          jlock _(r);
-          if(r->terminate_request) {
-            r->throw_c([=](oss& e) { e << "terminate request" ; });
-          }
-        }
 
         if (ret < 0) {
           if(errno == EINTR) {
@@ -450,9 +447,32 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
   if(r->err.str().size() > 0)
     ls->log_error(ls->logger_data,"Job #%ld's main loop executed with errors: %s\n", r->key, r->err.str().c_str());
 
+  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur);
+  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur2);
+  UW_SYSTEM_PIPE_CLOSE(ur_to_cmd);
+
   if (r->pid != -1) {
     int status;
-    int rc = waitpid(r->pid, &status, 0);
+    int rc;
+
+    while(1) {
+      if(r->terminate_request) {
+        int rc2 = kill(r->pid, SIGKILL);
+        if(rc2 != 0) {
+          ls->log_error(ls->logger_data,"Job #%ld, error killing the process: %d\n", r->key, errno);
+        }
+      }
+
+      status = 0;
+      rc = waitpid(r->pid, &status, 0);
+      if(rc < 0) {
+        if(errno == EINTR) {
+          ls->log_error(ls->logger_data, "Job #%ld, EINTR while in waitpid\n", r->key);
+          continue;
+        }
+      }
+      break;
+    }
 
     jlock _(r);
     if (rc == -1){
@@ -466,10 +486,6 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       dprintf("Job #%ld waitpid unexpected result code %d\n", r->key, rc);
     }
   }
-
-  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur);
-  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur2);
-  UW_SYSTEM_PIPE_CLOSE(ur_to_cmd);
 }
 /*}}}*/
 
@@ -815,9 +831,12 @@ uw_Basis_unit uw_CallbackFFI_terminate(struct uw_context *ctx,
     uw_CallbackFFI_job j)
 {
   get(j)->terminate_request = true;
-  int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
-  if(ret != 0)
-    dprintf("terminate: pthread_kill() failed with %d\n", ret);
+  if(get(j)->thread_started) {
+    int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
+    if(ret != 0) {
+      dprintf("terminate: pthread_kill() failed with %d\n", ret);
+    }
+  }
   return 0;
 }
 
@@ -896,7 +915,6 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   /* Job is already locked by _deref */
-
   get(j)->close_stdin = true;
   if(get(j)->thread_started) {
     int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
@@ -1089,6 +1107,12 @@ uw_Basis_int uw_CallbackFFI_pid(struct uw_context *ctx, uw_CallbackFFI_job j)
 }
 
 uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_job j)
+{
+  return get(j)->key;
+}
+
+/* Monadic version of ref */
+uw_CallbackFFI_jobref uw_CallbackFFI_refM(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   return get(j)->key;
 }
