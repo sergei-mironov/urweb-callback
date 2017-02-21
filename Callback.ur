@@ -148,8 +148,8 @@ end) = struct
       |Ready j => return (render j)
       |Running (c,ss) =>
         return <xml>
-          <dyn signal={v <- signal ss; return (render v)}/>
           <active code={spawn (v <- recv c; set ss v); return <xml/>}/>
+          <dyn signal={v <- signal ss; return (render v)}/>
           </xml>
 
 end
