@@ -14,6 +14,8 @@ structure C = Callback.Make(
       c <- oneRowE1 (SELECT J.S AS N FROM jobtable AS J WHERE J.Id = {[ji.Id]});
       j <- CallbackFFI.deref ji.Id;
       send c (CallbackFFI.blobLines (CallbackFFI.stdout j));
+      debug ("Completion fired for job #" ^ show ji.Id);
+      CallbackFFI.cleanup j;
       return {}
   end
 )
@@ -59,7 +61,7 @@ fun create1 {} : transaction (int*xbody) =
 fun create2 {} : transaction (int*xbody) =
   s <- source <xml/>;
   c <- channel;
-  j <- C.create( C.shellCommand "read p1; read p2; sleep 5; echo Parameters are $p1 $p2;"
+  j <- C.create( C.shellCommand "read p1; read p2; sleep 60; echo Parameters are $p1 $p2;"
     ++ {
       Stdin = Callback.Chunk (textBlob "33\n42\n",True)
     , Stdin_sz = 100

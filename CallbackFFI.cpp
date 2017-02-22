@@ -13,6 +13,8 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <urweb_cpp.h>
 #include "CallbackFFI.h"
@@ -308,7 +310,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       else
 #endif
       {
-        /* The Secure way */
+        /* The Secure Way */
         char* cmd = (char*) r->cmd.c_str();
         char** argv = new char* [r->args.size() + 2];
         int argc = 0;

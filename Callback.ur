@@ -78,9 +78,12 @@ end) = struct
       , Cmd = cmd
       , Hint = er};
 
-    query1 (SELECT * FROM handles WHERE handles.Id = {[jid]}) (fn r s =>
+    n <- query1 (SELECT * FROM handles WHERE handles.Id = {[jid]}) (fn r s =>
+      debug ("Job #" ^ show ji.Id ^ " notifying client " ^ show r.Id);
       send r.Channel ji ;
-      return s) {};
+      return (s+1)) 0;
+
+    debug ("Job #" ^ show ji.Id ^ " notifyed " ^ show n ^ " clients");
 
     dml (DELETE FROM handles WHERE Id = {[jid]});
 
