@@ -27,6 +27,41 @@ task initialize = fn _ =>
   FFI.initialize 4;
   return {}
 
+fun create_
+    (jid:int)
+    (ja:record jobargs)
+    (cb:option url)
+    : transaction FFI.job =
+
+  j <- FFI.create ja.Cmd ja.Stdout_wrap ja.Stdin_sz ja.Stdout_sz jid;
+  _ <- List.mapM (FFI.pushArg j) ja.Args;
+  FFI.setCompletionCB j cb;
+  _ <- (case ja.Stdin of
+    |Chunk (b,True) => (
+      FFI.pushStdin j b;
+      FFI.pushStdinEOF j;
+      return {}
+      )
+    |Chunk (b,False) => (
+      FFI.pushStdin j b;
+      return {}
+      ));
+
+  return j
+
+fun shellCommand (s:string) = {
+    Cmd = "/bin/sh"
+  , Args = "-c" :: s :: []
+  }
+
+val defaultIO = {
+    Stdin = Chunk (textBlob "",True)
+  , Stdin_sz = 0
+  , Stdout_sz = 1024
+  , Stdout_wrap = True
+  }
+
+
 functor Make(M : sig
 
   con u
@@ -48,23 +83,14 @@ end) = struct
     = Ready of record jobinfo
     | Running of (channel (record jobinfo)) * (source (record jobinfo))
 
+  val shellCommand = shellCommand
+  val defaultIO = defaultIO
+
   table handles : {Id : int, Channel : channel (record jobinfo)}
 
   task initialize = fn _ =>
     dml(DELETE FROM handles WHERE Id > 0);
     return {}
-
-  fun shellCommand (s:string) = {
-      Cmd = "/bin/sh"
-    , Args = "-c" :: s :: []
-    }
-
-  val defaultIO = {
-      Stdin = Chunk (textBlob "",True)
-    , Stdin_sz = 0
-    , Stdout_sz = 1024
-    , Stdout_wrap = True
-    }
 
   fun callback (jid:int) : transaction page =
     j <- FFI.deref jid;
@@ -99,15 +125,8 @@ end) = struct
 
     jid <- nextval M.s;
 
-    j <- FFI.create ja.Cmd ja.Stdout_wrap ja.Stdin_sz ja.Stdout_sz jid;
-    _ <- List.mapM (FFI.pushArg j) ja.Args;
-    FFI.setCompletionCB j (Some (url (callback jid)));
-    (case ja.Stdin of
-     |Chunk (b,True) =>
-       FFI.pushStdin j b;
-       FFI.pushStdinEOF j
-     |Chunk (b,False) =>
-       FFI.pushStdin j b);
+    j <- create_ jid ja (Some (url (callback jid)));
+
     FFI.run j;
 
     dml (insert M.t (
@@ -122,6 +141,20 @@ end) = struct
           (fn [t] => @sql_inject) M.fu injs fs)
       )
     );
+    return j
+
+  fun createSync
+      (ja:record jobargs)
+      (fs : record M.u)
+      : transaction FFI.job =
+
+    jid <- nextval M.s;
+
+    j <- create_ jid ja None;
+
+    FFI.executeSync j;
+    FFI.cleanup j;
+
     return j
 
 
@@ -157,4 +190,29 @@ end) = struct
 
 end
 
+
+
+functor MakeSync(M : sig
+
+  sequence s
+
+end) = struct
+
+  val shellCommand = shellCommand
+  val defaultIO = defaultIO
+
+  fun createSync
+      (ja:record jobargs)
+      : transaction FFI.job =
+
+    jid <- nextval M.s;
+
+    j <- create_ jid ja None;
+
+    FFI.executeSync j;
+    FFI.cleanup j;
+
+    return j
+
+end
 
