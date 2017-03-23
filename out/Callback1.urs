@@ -1,2 +1,0 @@
-
-val main : {} -> transaction page
