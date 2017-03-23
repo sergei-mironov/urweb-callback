@@ -13,6 +13,8 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <urweb_cpp.h>
 #include "CallbackFFI.h"
@@ -82,7 +84,7 @@ struct job {
     int& get() { return cnt; }
   };
 
-  job(jkey _key, const string &_cmd, int _bufsize) :
+  job(jkey _key, const string &_cmd, bool _wrap_stdout, size_t _stdin_sz, size_t _bufsize) :
 		  key(_key), cmd(_cmd) {
     buf_stdout.resize(_bufsize);
     buf_stderr.resize(_bufsize);
@@ -94,6 +96,9 @@ struct job {
     thread_started = false;
     cleanup_flag = 0;
     cmd_and_args = cmd;
+    stdin_max_sz = _stdin_sz;
+    wrap_stdout = _wrap_stdout;
+    terminate_request = false;
 
     atomic_counter c;
     c.get()++;
@@ -128,15 +133,20 @@ struct job {
   bool close_stdin;
   int cleanup_flag;
 
-  size_t sz_stdout;
-  size_t sz_stdin;
-  size_t sz_stderr;
+  size_t sz_stdout; // number of bytes already received
+  size_t sz_stdin; // number of bytes already sent
+  size_t sz_stderr; // number of bytes already received
 
   blob buf_stdout;
   blob buf_stdin;
   blob buf_stderr;
 
+  size_t stdin_max_sz;
+  bool wrap_stdout; // set if stdout wrapping should be allowed
+
   std::vector<string> args;
+
+  bool terminate_request;
 
   // Infrastructure errors (not stderr). Needs mutex.
   oss err;
@@ -178,7 +188,7 @@ private:
 
 static ssize_t read_job(int fd, jptr j, blob job::*buf, size_t job::*buf_sz, bool dump_to_stderr = false)
 {
-  size_t bytes_read;
+  ssize_t bytes_read;
   blob& b = *(j.get()).*buf;
   size_t &bs = *(j.get()).*buf_sz;
 
@@ -197,20 +207,20 @@ static ssize_t read_job(int fd, jptr j, blob job::*buf, size_t job::*buf_sz, boo
   }
   else {
     // FIXME: inefficient, don't use stack for buffers
-    blob devnull(b.size() / 2);
+    blob tmp(b.size() / 2);
 
-    bytes_read = read(fd, &devnull[0], devnull.size());
+    bytes_read = read(fd, &tmp[0], tmp.size());
 
     if(bytes_read < 0) {
       if(errno == EINTR)
         return -EINTR;
       else
-        j->throw_c([=](oss& e) { e << "read failed (devnull)" ; });
+        j->throw_c([=](oss& e) { e << "read failed (tmp)" ; });
     }
     else {
       jlock _(j);
       memmove(&b[0], &b[bytes_read], b.size() - bytes_read);
-      memcpy(&b[b.size() - bytes_read], &devnull[0], bytes_read);
+      memcpy(&b[b.size() - bytes_read], &tmp[0], bytes_read);
     }
   }
 
@@ -300,7 +310,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       else
 #endif
       {
-        /* The Secure way */
+        /* The Secure Way */
         char* cmd = (char*) r->cmd.c_str();
         char** argv = new char* [r->args.size() + 2];
         int argc = 0;
@@ -324,7 +334,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       UW_SYSTEM_PIPE_CLOSE_IN ( cmd_to_ur2 );
       UW_SYSTEM_PIPE_CLOSE_OUT( ur_to_cmd );
 
-      while (1){
+      while (1) {
         fd_set rfds, wfds, efds;
 
         int max_fd = 0;
@@ -342,6 +352,10 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
         {
           jlock _(r);
+          if(r->terminate_request) {
+            r->throw_c([=](oss& e) { e << "terminate request" ; });
+          }
+
           if(r->buf_stdin.size() > r->sz_stdin) {
             if (ur_to_cmd[1+2] != 0) {
               MY_FD_SET_546( ur_to_cmd[1], &wfds );
@@ -372,6 +386,13 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
 
         if (FD_ISSET( cmd_to_ur[0], &rfds )) {
           ret--;
+
+          if(!r->wrap_stdout && r->sz_stdout >= r->buf_stdout.size()) {
+            dprintf("Job #%ld, stdout wrapping is disabled, closing stdout\n", r->key);
+            UW_SYSTEM_PIPE_CLOSE_OUT(cmd_to_ur);
+            break;
+          }
+
           ssize_t ret = read_job(cmd_to_ur[0], r, &job::buf_stdout, &job::sz_stdout);
           if(ret < 0)
             continue;
@@ -410,7 +431,7 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
         if(ret > 0) {
           ls->log_error(ls->logger_data, "CallbackFFI BUG: select() reports unhandled state\n");
         }
-      }
+      } // while(1)
     }
   }
   catch(string &e) {
@@ -428,9 +449,32 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
   if(r->err.str().size() > 0)
     ls->log_error(ls->logger_data,"Job #%ld's main loop executed with errors: %s\n", r->key, r->err.str().c_str());
 
+  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur);
+  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur2);
+  UW_SYSTEM_PIPE_CLOSE(ur_to_cmd);
+
   if (r->pid != -1) {
     int status;
-    int rc = waitpid(r->pid, &status, 0);
+    int rc;
+
+    while(1) {
+      if(r->terminate_request) {
+        int rc2 = kill(r->pid, SIGKILL);
+        if(rc2 != 0) {
+          ls->log_error(ls->logger_data,"Job #%ld, error killing the process: %d\n", r->key, errno);
+        }
+      }
+
+      status = 0;
+      rc = waitpid(r->pid, &status, 0);
+      if(rc < 0) {
+        if(errno == EINTR) {
+          ls->log_error(ls->logger_data, "Job #%ld, EINTR while in waitpid\n", r->key);
+          continue;
+        }
+      }
+      break;
+    }
 
     jlock _(r);
     if (rc == -1){
@@ -444,10 +488,6 @@ static void execute(jptr r, uw_loggers *ls, sigset_t *pss)
       dprintf("Job #%ld waitpid unexpected result code %d\n", r->key, rc);
     }
   }
-
-  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur);
-  UW_SYSTEM_PIPE_CLOSE(cmd_to_ur2);
-  UW_SYSTEM_PIPE_CLOSE(ur_to_cmd);
 }
 /*}}}*/
 
@@ -718,6 +758,9 @@ uw_Basis_unit uw_CallbackFFI_initialize(
   struct uw_context *ctx,
   uw_Basis_int nthread)
 {
+  uw_loggers *ls = uw_get_loggers(ctx);
+  ls->log_debug(ls->logger_data, "[CB] Set UWCB_DEBUG to enable debug messages.\n");
+
   if((notifiers::started++) == 0) {
     notifiers::init(ctx,nthread);
   }
@@ -729,6 +772,8 @@ static char UWCB_LIMIT[] = "UWCB_LIMIT\0";
 uw_CallbackFFI_job uw_CallbackFFI_create(
   struct uw_context *ctx,
   uw_Basis_string cmd,
+  uw_Basis_bool wrap_stdout,
+  uw_Basis_int stdin_sz,
   uw_Basis_int stdout_sz,
   uw_Basis_int jr)
 {
@@ -745,8 +790,12 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
     }
   }
 
+  if(stdin_sz < 0 || stdout_sz < 0) {
+    uw_error(ctx, FATAL, "Invalid stdin or stdout size\n");
+  }
+
   {
-    pp = new jptr(new job(jr, cmd, stdout_sz));
+    pp = new jptr(new job(jr, cmd, (wrap_stdout == uw_Basis_True), stdin_sz, stdout_sz));
     get(pp)->m.lock();
     dprintf("Job #%ld create lock (cmd %s)\n", get(pp)->key, cmd);
 
@@ -780,18 +829,32 @@ uw_CallbackFFI_job uw_CallbackFFI_create(
   return pp;
 }
 
+uw_Basis_unit uw_CallbackFFI_terminate(struct uw_context *ctx,
+    uw_CallbackFFI_job j)
+{
+  get(j)->terminate_request = true;
+  if(get(j)->thread_started) {
+    int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
+    if(ret != 0) {
+      dprintf("terminate: pthread_kill() failed with %d\n", ret);
+    }
+  }
+  return 0;
+}
+
+
 uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
     uw_CallbackFFI_job j,
-    uw_Basis_blob _stdin,
-    uw_Basis_int maxsz)
+    uw_Basis_blob _stdin)
 {
 
   int jr = get(j)->key;
+  size_t maxsz = get(j)->stdin_max_sz;
 
-  dprintf("Job #%ld push_stdin\n", get(j)->key);
+  dprintf("Job #%d pushStdin: buf-sz %lu stdin-max-sz %lu\n", jr, _stdin.size, maxsz);
 
   if(_stdin.size > maxsz)
-    uw_error(ctx, FATAL, "pushStdin: input of size %d will never fit into job #%d's buffer of size %d\n",
+    uw_error(ctx, FATAL, "pushStdin: single buffer of size %d will never fit into job #%d's buffer of size %d\n",
       _stdin.size, jr, maxsz);
 
   enum {ok, closed, err} ret = err;
@@ -854,7 +917,6 @@ uw_Basis_unit uw_CallbackFFI_pushStdin(struct uw_context *ctx,
 uw_Basis_unit uw_CallbackFFI_pushStdinEOF(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   /* Job is already locked by _deref */
-
   get(j)->close_stdin = true;
   if(get(j)->thread_started) {
     int ret = pthread_kill(get(j)->thread, JOB_SIGNAL);
@@ -1047,6 +1109,12 @@ uw_Basis_int uw_CallbackFFI_pid(struct uw_context *ctx, uw_CallbackFFI_job j)
 }
 
 uw_CallbackFFI_jobref uw_CallbackFFI_ref(struct uw_context *ctx, uw_CallbackFFI_job j)
+{
+  return get(j)->key;
+}
+
+/* Monadic version of ref */
+uw_CallbackFFI_jobref uw_CallbackFFI_refM(struct uw_context *ctx, uw_CallbackFFI_job j)
 {
   return get(j)->key;
 }
