@@ -19,13 +19,14 @@ via NIX\_PATH variable.
 
     $ git clone https://github.com/grwlf/urweb-callback
     $ cd urweb-callback
-    $ nix-build build.nix -A callback
+    $ nix-build -A callback
 
 Compiling the Demo
 ------------------
 
-    $ nix-build build.nix -A callback-demo
-    $ ./result/Callback1.exe
+    $ nix-build -A callback-demo
+    $ ./result/mkdb.sh
+    $ ./result/CallbackDemo.exe
     $ browser http://127.0.0.1:8080/Callback1/main
 
 
